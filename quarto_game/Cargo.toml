@@ -1,5 +1,5 @@
 [package]
-name = "rust_quarto"
+name = "quarto_game"
 version = "0.1.0"
 edition = "2021"
 
@@ -7,3 +7,4 @@ edition = "2021"
 
 [dependencies]
 array2d = "0.2.1"
+prettytable-rs = "0.8.0"

@@ -206,6 +206,7 @@ dependencies = [
 name = "quarto_game"
 version = "0.1.0"
 dependencies = [
+ "ansi_term",
  "array2d",
  "prettytable-rs",
 ]

@@ -1,10 +1,11 @@
+use ansi_term::Style;
 use std::fmt::Display;
 
 
 
 use prettytable::{Table as pTable, Cell as pCell, Row as pRow};
 
-use crate::piece::{Color, Height, Hole, Piece, PieceFeature, Shape};
+use crate::piece::{Color, Height, Hole, Piece, PieceFeature, Shape, IterEnum};
 
 const WIDTH_BOARD: usize = 4;
 const HEIGHT_BOARD: usize = 4;
@@ -62,10 +63,6 @@ impl Board {
         pieces
     }
 
-    // pub fn new_game(&self) {
-    //     let mut cells_array = vec![vec![0; 4]; 4];
-    // }
-
     // fn get_index(&self, row: usize, col: usize) -> usize {
     //     row * WIDTH_BOARD + col
     // }
@@ -73,38 +70,57 @@ impl Board {
 
 impl Display for Board {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let mut table = pTable::new();
+        
 
-        // Add a row per time
-        table.add_row(pRow::new(vec![pCell::new("ABC"), pCell::new("DEFG"), pCell::new("HIJKLMN")]));
-        table.add_row(pRow::new(vec![pCell::new("foobar"), pCell::new("bar"), pCell::new("foo")]));
-        // A more complicated way to add a row:
-        table.add_row(pRow::new(vec![
-            pCell::new("foobar2"),
-            pCell::new("bar2"),
-            pCell::new("foo2")]));
-        //eturn write!(f, "{}", table);
+        // let test_iter: Vec<Box<dyn IterEnum>> = vec![Box::<Color::iterate()>, Box::<Height::iterate()>];
+        let mut legend = format!("{}{}{}", "\n", Style::new().bold().underline().paint("Legend:"), "\n");
 
-        // let mut display: String = String::from("");
+        //Draw legend
+        for e in Color::iterate() {
+            legend = format!("{}\t{}: {}", legend, e.color().paint(e.acronym()), e.name());
+        }
+        legend = format!("{}{}", legend, "\n");
+        for e in Hole::iterate() {
+            legend = format!("{}\t{}: {}", legend, e.color().paint(e.acronym()), e.name());
+        }
+        legend = format!("{}{}", legend, "\n");
+        for e in Height::iterate() {
+            legend = format!("{}\t{}: {}", legend, e.color().paint(e.acronym()), e.name());
+        }
+        legend = format!("{}{}", legend, "\n");
+        for e in Shape::iterate() {
+            legend = format!("{}\t{}: {}", legend, e.color().paint(e.acronym()), e.name());
+        }
+        
+        //Draw available piece
+        legend = format!("{}\n\n{}", legend, Style::new().bold().underline().paint("Piece available:"));
+        let mut table_available_piece = pTable::new();
+        let mut current_row = pRow::empty();
+        
+        for(i , piece) in self.available_pieces.iter().enumerate() {
+            current_row.add_cell(pCell::new_align(format!("{:0>2}\n{}", i + 1, piece.to_string().as_str()).as_str(), prettytable::format::Alignment::CENTER));
+            if (i + 1) % 8 == 0 && i != self.available_pieces.len() - 1 {
+                table_available_piece.add_row(current_row);
+                current_row = pRow::empty();
+            }
+        }
+        table_available_piece.add_row(current_row);
 
-        // for (i, cell) in self.cells.iter().enumerate() {
-        //     table.add_row(pRow::new(vec![
-        //         pCell::new("foobar2"),
-        //         pCell::new("bar2"),
-        //         pCell::new("foo2")]));
 
-        //     // s = format!("XFPG\n");
-
-        //     s = format!(
-        //         "XFPG{}{}",
-        //         if (i / HEIGHT_BOARD) < (HEIGHT_BOARD - 1) { "____" } else { "    " },
-        //         if (i + 1) % WIDTH_BOARD == 0 { "\n" } else { "|" }
-        //     );
-
-        //     // display = format!("{}{}", display, s);
-        // }
-        return write!(f, "{}", table);
-        // return write!(f, "{}", format!("\n{}\n", display));
+        //Draw Board
+        let mut table_board = pTable::new();
+        current_row = pRow::empty();
+        
+        for (i, cell) in self.cells.iter().enumerate() {
+            // current_row.add_cell(pCell::new(cell.to_string().as_str()));
+            current_row.add_cell(pCell::new_align(format!("{:0>2}\n{}", i + 1, cell.to_string().as_str()).as_str(), prettytable::format::Alignment::CENTER));
+            if (i + 1) % WIDTH_BOARD == 0 {
+                table_board.add_row(current_row);
+                current_row = pRow::empty();
+            }
+        }
+        legend = format!("{}\n{}\n{}", legend, table_available_piece, table_board);
+        return write!(f, "{}", legend);
     }
 }
 
@@ -119,11 +135,11 @@ impl Display for Cell {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            " {} ",
+            "{}",
             if let Some(p) = &self.piece {
                 p.to_string()
             } else {
-                "  ".to_string()
+                "    ".to_string()
             }
         )
     }

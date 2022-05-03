@@ -1,3 +1,4 @@
+use ansi_term::Colour as ConsoleColor;
 use std::fmt::Display;
 
     pub trait PieceFeature
@@ -5,7 +6,11 @@ use std::fmt::Display;
     {
         fn iterate() -> Vec<Self>;
         fn acronym(&self) -> &str;
+        fn name(&self) -> &str;
+        fn color(&self) -> ConsoleColor;
     }
+
+    pub trait IterEnum {}
 
     #[derive(Debug, Clone, PartialEq)]
     pub enum Color {
@@ -13,6 +18,7 @@ use std::fmt::Display;
         Dark,
     }
 
+    impl IterEnum for Vec<Color> {}
     impl PieceFeature for Color {
         fn acronym(&self) -> &str {
             match self {
@@ -21,13 +27,24 @@ use std::fmt::Display;
             }
         }
 
+        fn name(&self) -> &str {
+            match self {
+                Self::White => "White",
+                Self::Dark => "Dark"
+            }
+        }
+
+        fn color(&self) -> ConsoleColor {
+            ConsoleColor::Blue
+        }
+
         fn iterate() -> Vec<Self> {
             vec![Self::White, Self::Dark]
         }
     }
     impl Display for Color {
         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-            write!(f, "{}", &self.acronym())
+            write!(f, "{}", self.color().paint(self.acronym()))
         }
     }
 
@@ -36,7 +53,7 @@ use std::fmt::Display;
         Empty,
         Full,
     }
-
+    impl IterEnum for Vec<Hole> {}
     impl PieceFeature for Hole {
         fn acronym(&self) -> &str {
             match self {
@@ -45,13 +62,24 @@ use std::fmt::Display;
             }
         }
 
+        fn name(&self) -> &str {
+            match self {
+                Self::Empty => "Empty",
+                Self::Full => "Full"
+            }
+        }
+
+        fn color(&self) -> ConsoleColor {
+            ConsoleColor::Purple
+        }
+
         fn iterate() -> Vec<Self> {
             vec![Self::Empty, Self::Full]
         }
     }
     impl Display for Hole {
         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-            write!(f, "{}", &self.acronym())
+            write!(f, "{}", self.color().paint(self.acronym()))
         }
     }
 
@@ -61,6 +89,7 @@ use std::fmt::Display;
         Tall,
     }
 
+    impl IterEnum for Vec<Height> {}
     impl PieceFeature for Height {
         fn acronym(&self) -> &str {
             match self {
@@ -69,13 +98,24 @@ use std::fmt::Display;
             }
         }
 
+        fn name(&self) -> &str {
+            match self {
+                Self::Small => "Small",
+                Self::Tall => "Tall"
+            }
+        }
+
+        fn color(&self) -> ConsoleColor {
+            ConsoleColor::Red
+        }
+
         fn iterate() -> Vec<Self> {
             vec![Self::Small, Self::Tall]
         }
     }
     impl Display for Height {
         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-            write!(f, "{}", &self.acronym())
+            write!(f, "{}", self.color().paint(self.acronym()))
         }
     }
 
@@ -85,6 +125,7 @@ use std::fmt::Display;
         Square,
     }
 
+    impl IterEnum for Vec<Shape> {}
     impl PieceFeature for Shape {
         fn acronym(&self) -> &str {
             match self {
@@ -93,13 +134,24 @@ use std::fmt::Display;
             }
         }
 
+        fn name(&self) -> &str {
+            match self {
+                Self::Circle => "Circle",
+                Self::Square => "Square"
+            }
+        }
+
+        fn color(&self) -> ConsoleColor {
+            ConsoleColor::Green
+        }
+
         fn iterate() -> Vec<Self> {
             vec![Self::Circle, Self::Square]
         }
     }
     impl Display for Shape {
         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-            write!(f, "{}", &self.acronym())
+            write!(f, "{}", self.color().paint(self.acronym()))
         }
     }
 

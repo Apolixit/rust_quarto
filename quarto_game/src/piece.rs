@@ -1,17 +1,17 @@
 use ansi_term::Colour as ConsoleColor;
 use enum_iterator::IntoEnumIterator;
-use std::{fmt::Display};
+use std::fmt::Display;
 
 pub trait PieceFeature {
     fn acronym(&self) -> &str;
     fn name(&self) -> &str;
     fn color(&self) -> ConsoleColor;
-    fn to_vec_box() -> Vec<Box<dyn PieceFeature>>
+    fn to_vec_boxed() -> Vec<Box<dyn PieceFeature>>
     where
         Self: Sized;
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, IntoEnumIterator)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, IntoEnumIterator)]
 pub enum Color {
     White,
     Dark,
@@ -36,7 +36,7 @@ impl PieceFeature for Color {
         ConsoleColor::Blue
     }
 
-    fn to_vec_box() -> Vec<Box<dyn PieceFeature>> {
+    fn to_vec_boxed() -> Vec<Box<dyn PieceFeature>> {
         vec![Box::new(Color::White), Box::new(Color::Dark)]
     }
 }
@@ -57,7 +57,7 @@ impl From<&str> for Color {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, IntoEnumIterator)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, IntoEnumIterator)]
 pub enum Hole {
     Empty,
     Full,
@@ -81,7 +81,7 @@ impl PieceFeature for Hole {
         ConsoleColor::Purple
     }
 
-    fn to_vec_box() -> Vec<Box<dyn PieceFeature>> {
+    fn to_vec_boxed() -> Vec<Box<dyn PieceFeature>> {
         vec![Box::new(Hole::Empty), Box::new(Hole::Full)]
     }
 }
@@ -102,7 +102,7 @@ impl From<&str> for Hole {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, IntoEnumIterator)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, IntoEnumIterator)]
 pub enum Height {
     Small,
     Tall,
@@ -127,7 +127,7 @@ impl PieceFeature for Height {
         ConsoleColor::Red
     }
 
-    fn to_vec_box() -> Vec<Box<dyn PieceFeature>> {
+    fn to_vec_boxed() -> Vec<Box<dyn PieceFeature>> {
         vec![Box::new(Height::Small), Box::new(Height::Tall)]
     }
 }
@@ -148,7 +148,7 @@ impl From<&str> for Height {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, IntoEnumIterator)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, IntoEnumIterator)]
 pub enum Shape {
     Circle,
     Square,
@@ -173,7 +173,7 @@ impl PieceFeature for Shape {
         ConsoleColor::Green
     }
 
-    fn to_vec_box() -> Vec<Box<dyn PieceFeature>> {
+    fn to_vec_boxed() -> Vec<Box<dyn PieceFeature>> {
         vec![Box::new(Shape::Circle), Box::new(Shape::Square)]
     }
 }
@@ -195,12 +195,12 @@ impl From<&str> for Shape {
 }
 
 //Represent piece settings
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Eq)]
 pub struct Piece {
-    color: Color,
-    hole: Hole,     //○, □
-    height: Height, //⇑, ⇓
-    shape: Shape,   //○, □
+    pub color: Color,
+    pub hole: Hole,     //○, □
+    pub height: Height, //⇑, ⇓
+    pub shape: Shape,   //○, □
 }
 
 impl Piece {
@@ -211,6 +211,25 @@ impl Piece {
             height,
             shape,
         }
+    }
+
+    pub fn check_piece_is_winning(pieces: &mut Vec<Piece>) -> bool {
+        //We need at least a 4 size vector
+        if pieces.len() < 4 { return false; }
+
+        let winning_condition = vec![
+            pieces.into_iter().all(|p| p.color == Color::Dark),
+            pieces.into_iter().all(|p| p.color == Color::White),
+            pieces.into_iter().all(|p| p.height == Height::Small),
+            pieces.into_iter().all(|p| p.height == Height::Tall),
+            pieces.into_iter().all(|p| p.hole == Hole::Empty),
+            pieces.into_iter().all(|p| p.hole == Hole::Empty),
+            pieces.into_iter().all(|p| p.shape == Shape::Circle),
+            pieces.into_iter().all(|p| p.shape == Shape::Square),
+        ];
+        print!("Vec<Piece> : {:?}", winning_condition);
+
+        winning_condition.iter().any(|w| *w)
     }
 }
 
@@ -235,7 +254,6 @@ impl Display for Piece {
 
 impl From<&str> for Piece {
     fn from(s: &str) -> Self {
-        
         //4 character max
         if s.chars().count() != 4 {
             panic!("Out of bound");
@@ -310,7 +328,8 @@ mod tests {
     #[test]
     #[should_panic]
     fn from_error_string_slice() {
-        Piece::from("DESCC");
+        let x = Piece::from("DESCC");
+        println!("{}", x);
     }
 
     #[test]
@@ -335,8 +354,35 @@ mod tests {
     }
 
     #[test]
+    fn test_are_cells_winning() {
+        let mut v_3 = vec![
+            Piece::new(Color::White, Hole::Empty, Height::Small, Shape::Circle),
+            Piece::new(Color::White, Hole::Empty, Height::Small, Shape::Circle),
+            Piece::new(Color::White, Hole::Empty, Height::Small, Shape::Circle)
+        ];
+        assert_eq!(Piece::check_piece_is_winning(&mut v_3),  false);
+
+        let mut v_4_1 = vec![
+            Piece::new(Color::White, Hole::Empty, Height::Small, Shape::Circle),
+            Piece::new(Color::Dark, Hole::Full, Height::Tall, Shape::Circle),
+            Piece::new(Color::White, Hole::Empty, Height::Small, Shape::Circle),
+            Piece::new(Color::White, Hole::Empty, Height::Small, Shape::Square)
+        ];
+        assert_eq!(Piece::check_piece_is_winning(&mut v_4_1),  false);
+
+        let mut v_4_2 = vec![
+            Piece::new(Color::White, Hole::Empty, Height::Small, Shape::Circle),
+            Piece::new(Color::White, Hole::Full, Height::Tall, Shape::Circle),
+            Piece::new(Color::White, Hole::Empty, Height::Small, Shape::Circle),
+            Piece::new(Color::White, Hole::Empty, Height::Small, Shape::Square)
+        ];
+        assert_eq!(Piece::check_piece_is_winning(&mut v_4_2),  true);
+    }
+
+    #[test]
     #[should_panic]
     fn from_error_chars() {
-        Piece::from(['D', 'E', 'S', 'Z']);
+        let x = Piece::from(['D', 'E', 'S', 'Z']);
+        println!("{}", x);
     }
 }

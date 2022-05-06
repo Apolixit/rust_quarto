@@ -10,3 +10,5 @@ array2d = "0.2.1"
 prettytable-rs = "0.8.0"
 ansi_term = "0.12.1"
 enum-iterator = "0.7.0"
+log = "0.4.16"
+console_log = { version = "0.2", optional = true, features = ["color"] }

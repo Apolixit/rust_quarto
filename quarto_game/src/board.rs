@@ -6,7 +6,7 @@ use std::{
     collections::BTreeMap,
     fmt::Display,
     ops::{Index, IndexMut},
-    panic, borrow::BorrowMut,
+    panic,
 };
 
 use prettytable::{Cell as pCell, Row as pRow, Table as pTable};
@@ -156,7 +156,7 @@ impl Board {
 
     pub fn is_board_winning(&self) -> Option<Vec<&Cell>> {
         //Horizontal check
-        'x_x: for i in 0..WIDTH_BOARD {
+        for i in 0..WIDTH_BOARD {
             // println!("x_x");
             let mut horizontal_cells: Vec<&Cell> = Vec::with_capacity(HEIGHT_BOARD);
             'y_x: for j in 0..HEIGHT_BOARD {
@@ -178,7 +178,7 @@ impl Board {
             }
         }
 
-        'x_y: for i in 0..WIDTH_BOARD {
+        for i in 0..WIDTH_BOARD {
             let mut vertical_cells: Vec<&Cell> = Vec::with_capacity(HEIGHT_BOARD);
             'y_y: for j in 0..HEIGHT_BOARD {
                 //If the cell is empty -> break this loop iteration
@@ -188,7 +188,7 @@ impl Board {
                 }
                 vertical_cells.push(current_cell);
             }
-            
+
             if Board::check_cell_is_winning(&mut vertical_cells) {
                 // println!("Winnnn vertical_cells");
                 return Some(vertical_cells);
@@ -196,10 +196,28 @@ impl Board {
         }
 
         //Diagonale
-        // let mut diagonal_cells: Vec<&Cell> = Vec::with_capacity(HEIGHT_BOARD);
-        // vertical_cells.push(current_cell);
+        let mut diagonal_cells: Vec<&Cell> = vec![
+            self.cells.get(&Board::get_index(0, 0).unwrap()).unwrap(),
+            self.cells.get(&Board::get_index(1, 1).unwrap()).unwrap(),
+            self.cells.get(&Board::get_index(2, 2).unwrap()).unwrap(),
+            self.cells.get(&Board::get_index(3, 3).unwrap()).unwrap(),
+        ];
+        if Board::check_cell_is_winning(&mut diagonal_cells) {
+            return Some(diagonal_cells);
+        }
 
-        //Vertical check
+        let mut diagonal_cells: Vec<&Cell> = vec![
+            self.cells.get(&Board::get_index(0, 3).unwrap()).unwrap(),
+            self.cells.get(&Board::get_index(1, 2).unwrap()).unwrap(),
+            self.cells.get(&Board::get_index(3, 2).unwrap()).unwrap(),
+            self.cells.get(&Board::get_index(3, 0).unwrap()).unwrap(),
+        ];
+        if Board::check_cell_is_winning(&mut diagonal_cells) {
+            return Some(diagonal_cells);
+        }
+
+
+
         None
     }
 
@@ -210,7 +228,13 @@ impl Board {
         // println!("All cells are filled");
 
         let mut pieces: Vec<Piece> = cells.into_iter().map(|c| c.piece.unwrap()).collect();
-        Piece::check_piece_is_winning(&mut pieces)
+        let is_win = Piece::check_piece_is_winning(&mut pieces);
+
+        is_win
+    }
+
+    pub fn hightlight_winning_cells(cells: &mut Vec<Cell>) {
+        cells.into_iter().for_each(|c| c.background_color = CellColor::Green);
     }
 }
 

@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use crate::{
     board::{Board},
     error::ErrorGame,
@@ -15,6 +17,12 @@ impl Player {
             name: name.to_string(),
             score: None,
         }
+    }
+}
+
+impl Display for Player {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.name)
     }
 }
 
@@ -51,6 +59,10 @@ impl Game {
         &self.players[self.current_index_player]
     }
 
+    pub fn opponent_player(&self) -> &Player {
+        &self.players[(self.current_index_player as isize - 1).abs() as usize]
+    }
+
     ///Switch the current player to the other
     pub fn switch_current_player(&mut self) {
         self.current_index_player = (self.current_index_player as isize - 1).abs() as usize;
@@ -79,7 +91,7 @@ impl Game {
         Ok(piece_removed)
     }
 
-    
+
 }
 
 #[cfg(test)]
@@ -100,15 +112,10 @@ mod tests {
         let mut game = Game::new("p1", "p2");
 
         let available_pieces = &game.board.get_available_pieces();
-        //let cells = &game.board.get_cells();
-        // println!("cells = {:?}", cells);
         let nb_initial_piece = available_pieces.len();
 
         let selected_piece = available_pieces.get(&INDEX_PIECE).unwrap();
         println!("selected_piece = {}", selected_piece);
-        //let selected_cell = cells.get(&0).unwrap();
-
-        // println!("selected_piece = {:?} / selected_cell = {:?}", selected_piece, selected_cell);
 
         game.play(
             selected_piece,

@@ -8,3 +8,4 @@ edition = "2021"
 [dependencies]
 quarto_game = { path = "../quarto_game" }
 ansi_term = "0.12.1"
+termion = "*"

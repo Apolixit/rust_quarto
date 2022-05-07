@@ -227,7 +227,7 @@ impl Piece {
             pieces.into_iter().all(|p| p.shape == Shape::Circle),
             pieces.into_iter().all(|p| p.shape == Shape::Square),
         ];
-        print!("Vec<Piece> : {:?}", winning_condition);
+        // print!("Vec<Piece> : {:?}", winning_condition);
 
         winning_condition.iter().any(|w| *w)
     }

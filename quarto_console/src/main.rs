@@ -1,7 +1,7 @@
 use std::io;
 
+use ansi_term::Style;
 use quarto_game::{board::Board, game::Game};
-use termion;
 
 fn main() {
     println!("Welcome to Quarto game");
@@ -44,17 +44,21 @@ fn main() {
                 if let Err(e) = game.play_index(piece_key, cell_key) {
                     println!("Error : {}", e);
                     continue;
+                } else {
+                    break;
                 }
             }
 
 
-            if let Some(winning_cells) = game.get_board().is_board_winning() {
-                println!("{} win the game !", game.current_player());
-
+            if let Some(mut winning_cells) = game.get_board().is_board_winning() {
                 //if the game is win, we color the background cell to highlight the good combinaison
+                Board::hightlight_winning_cells(&mut winning_cells);
 
                 //We display the board for the last time to show the winning combinaison
                 println!("{}", game.get_board());
+
+                println!("{} win the game !", Style::new().bold().underline().paint(game.current_player().to_string()));
+
                 break 'game;
             }
 

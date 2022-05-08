@@ -4,7 +4,8 @@ use std::fmt::Display;
 pub enum ErrorGame {
     IndexOutOfBound,
     PieceDoesNotExists,
-    PieceDoesNotBelongPlayable
+    PieceDoesNotBelongPlayable,
+    CellIsNotEmpty,
 }
 
 impl ErrorGame {
@@ -12,7 +13,8 @@ impl ErrorGame {
         match self {
             Self::IndexOutOfBound => "Index out of bound",
             Self::PieceDoesNotExists => "Piece does not exists",
-            Self::PieceDoesNotBelongPlayable => "Piece has already been played"
+            Self::PieceDoesNotBelongPlayable => "Piece has already been played",
+            Self::CellIsNotEmpty => "The cell is not empty",
         }
     }
 }

@@ -1,10 +1,6 @@
 use std::fmt::Display;
 
-use crate::{
-    board::{Board},
-    error::ErrorGame,
-    piece::Piece,
-};
+use crate::{board::Board, error::ErrorGame, piece::Piece};
 
 pub struct Player {
     pub name: String,
@@ -51,6 +47,10 @@ impl Game {
         &self.board
     }
 
+    pub fn get_board_mut(&mut self) -> &mut Board {
+        &mut self.board
+    }
+
     pub fn get_player(&self, index: usize) -> &Player {
         &self.players[index]
     }
@@ -90,8 +90,6 @@ impl Game {
 
         Ok(piece_removed)
     }
-
-
 }
 
 #[cfg(test)]
@@ -103,6 +101,9 @@ mod tests {
         let new_game = Game::new("p1", "p2");
         assert_eq!(new_game.get_player(0).name, "p1".to_string());
         assert_eq!(new_game.get_player(1).name, "p2".to_string());
+
+        assert_eq!(new_game.current_player().name, "p1".to_string());
+        assert_eq!(new_game.opponent_player().name, "p2".to_string());
     }
 
     #[test]
@@ -117,10 +118,7 @@ mod tests {
         let selected_piece = available_pieces.get(&INDEX_PIECE).unwrap();
         println!("selected_piece = {}", selected_piece);
 
-        game.play(
-            selected_piece,
-            INDEX_CELL,
-        )?;
+        game.play(selected_piece, INDEX_CELL)?;
 
         assert_eq!(
             game.board.get_available_pieces().len(),
@@ -145,10 +143,7 @@ mod tests {
 
         let selected_piece = available_pieces.get(&0).unwrap();
 
-        game.play_index(
-            0,
-            0,
-        )?;
+        game.play_index(0, 0)?;
 
         assert_eq!(
             game.board.get_available_pieces().len(),
@@ -168,20 +163,11 @@ mod tests {
     fn start_new_game_and_play_multiple_turn() -> Result<(), ErrorGame> {
         let mut game = Game::new("p1", "p2");
 
-        let piece_0 = game.play_index(
-            0,
-            0,
-        )?;
+        let piece_0 = game.play_index(0, 0)?;
 
-        let piece_1 = game.play_index(
-            1,
-            5,
-        )?;
+        let piece_1 = game.play_index(1, 5)?;
 
-        let piece_10 = game.play_index(
-            10,
-            12,
-        )?;
+        let piece_10 = game.play_index(10, 12)?;
 
         match game.board[0].piece {
             Some(p) => {
@@ -203,6 +189,62 @@ mod tests {
             }
             None => panic!("No piece found"),
         }
+
+        Ok(())
+    }
+
+    /// Play the first piece in case num 25 (outside the board)
+    #[test]
+    fn start_new_game_and_try_to_play_piece_out_of_board_should_fail() -> Result<(), ErrorGame> {
+        let mut game = Game::new("p1", "p2");
+
+        assert_eq!(game.play_index(0, 25), Err(ErrorGame::IndexOutOfBound));
+        assert_eq!(game.play_index(0, 16), Err(ErrorGame::IndexOutOfBound));
+        Ok(())
+    }
+
+    /// Play the same piece two time, should fail
+    #[test]
+    fn start_new_game_and_try_to_play_multiple_time_same_piece_should_fail() -> Result<(), ErrorGame>
+    {
+        let mut game = Game::new("p1", "p2");
+
+        game.play_index(0, 0)?;
+        assert_eq!(
+            game.play_index(0, 1),
+            Err(ErrorGame::PieceDoesNotBelongPlayable)
+        );
+
+        Ok(())
+    }
+
+    /// Play two pieces in the same cell should fail
+    #[test]
+    fn start_new_game_and_try_to_play_multiple_piece_same_cell_should_fail() -> Result<(), ErrorGame>
+    {
+        let mut game = Game::new("p1", "p2");
+
+        game.play_index(0, 0)?;
+        assert_eq!(
+            game.play_index(1, 0),
+            Err(ErrorGame::CellIsNotEmpty)
+        );
+
+        Ok(())
+    }
+
+    /// Remove piece multiple time
+    #[test]
+    fn start_new_game_and_try_to_remove_multiple_piece_should_fail() -> Result<(), ErrorGame>
+    {
+        let mut game = Game::new("p1", "p2");
+
+        game.get_board_mut().remove_piece(0)?;
+
+        assert_eq!(
+            game.get_board_mut().remove_piece(0),
+            Err(ErrorGame::PieceDoesNotExists)
+        );
 
         Ok(())
     }

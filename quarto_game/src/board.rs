@@ -9,7 +9,7 @@ use std::{
     panic,
 };
 
-use prettytable::{Cell as pCell, Row as pRow, Table as pTable};
+use prettytable::{color as pColor, Attr as pAttr, Cell as pCell, Row as pRow, Table as pTable};
 
 use crate::piece::{Color, Height, Hole, Piece, PieceFeature, Shape};
 
@@ -95,6 +95,8 @@ impl Board {
         }
     }
 
+
+
     pub fn play_piece(
         &mut self,
         piece_index: usize,
@@ -115,6 +117,10 @@ impl Board {
             self.cells.get(&cell_index).unwrap()
         );
 
+        if let Some(_) = self.cells.get(&cell_index).unwrap().piece {
+            return Err(ErrorGame::CellIsNotEmpty);
+        }
+
         self.cells
             .entry(cell_index)
             .and_modify(|f| f.piece = Some(*piece));
@@ -128,7 +134,7 @@ impl Board {
     }
 
     pub fn remove_piece(&mut self, index: usize) -> Result<Piece, ErrorGame> {
-        info!("Piece num {} remove from availables", index);
+        // info!("Piece num {} remove from availables", index);
         self.available_pieces
             .remove(&index)
             .ok_or(ErrorGame::PieceDoesNotExists)
@@ -154,15 +160,18 @@ impl Board {
         &self.cells
     }
 
-    pub fn is_board_winning(&self) -> Option<Vec<&Cell>> {
+    pub fn is_board_winning(&self) -> Option<Vec<Cell>> {
+        //Helper closure to get the ownership of the cell
+        let get_cell = |x, y| *self.cells.get(&Board::get_index(x, y).unwrap()).unwrap();
+
         //Horizontal check
         for i in 0..WIDTH_BOARD {
             // println!("x_x");
-            let mut horizontal_cells: Vec<&Cell> = Vec::with_capacity(HEIGHT_BOARD);
+            let mut horizontal_cells: Vec<Cell> = Vec::with_capacity(HEIGHT_BOARD);
             'y_x: for j in 0..HEIGHT_BOARD {
                 //If the cell is empty -> break this loop iteration
-                let current_cell = self.cells.get(&Board::get_index(j, i).unwrap()).unwrap();
-                // println!("Current cell : {} / current index : {}", current_cell, Board::get_index(j, i).unwrap());
+                let current_cell = get_cell(j, i); //*self.cells.get(&Board::get_index(j, i).unwrap()).unwrap();
+                                                   // println!("Current cell : {} / current index : {}", current_cell, Board::get_index(j, i).unwrap());
 
                 if let None = current_cell.piece {
                     // println!("Cell empty, break");
@@ -179,10 +188,10 @@ impl Board {
         }
 
         for i in 0..WIDTH_BOARD {
-            let mut vertical_cells: Vec<&Cell> = Vec::with_capacity(HEIGHT_BOARD);
+            let mut vertical_cells: Vec<Cell> = Vec::with_capacity(HEIGHT_BOARD);
             'y_y: for j in 0..HEIGHT_BOARD {
                 //If the cell is empty -> break this loop iteration
-                let current_cell = self.cells.get(&Board::get_index(i, j).unwrap()).unwrap();
+                let current_cell = get_cell(i, j); //*self.cells.get(&Board::get_index(i, j).unwrap()).unwrap();
                 if let None = current_cell.piece {
                     break 'y_y;
                 }
@@ -196,32 +205,30 @@ impl Board {
         }
 
         //Diagonale
-        let mut diagonal_cells: Vec<&Cell> = vec![
-            self.cells.get(&Board::get_index(0, 0).unwrap()).unwrap(),
-            self.cells.get(&Board::get_index(1, 1).unwrap()).unwrap(),
-            self.cells.get(&Board::get_index(2, 2).unwrap()).unwrap(),
-            self.cells.get(&Board::get_index(3, 3).unwrap()).unwrap(),
+        let mut diagonal_cells: Vec<Cell> = vec![
+            get_cell(0, 0),
+            get_cell(1, 1),
+            get_cell(2, 2),
+            get_cell(3, 3),
         ];
         if Board::check_cell_is_winning(&mut diagonal_cells) {
             return Some(diagonal_cells);
         }
 
-        let mut diagonal_cells: Vec<&Cell> = vec![
-            self.cells.get(&Board::get_index(0, 3).unwrap()).unwrap(),
-            self.cells.get(&Board::get_index(1, 2).unwrap()).unwrap(),
-            self.cells.get(&Board::get_index(3, 2).unwrap()).unwrap(),
-            self.cells.get(&Board::get_index(3, 0).unwrap()).unwrap(),
+        let mut diagonal_cells: Vec<Cell> = vec![
+            get_cell(0, 3),
+            get_cell(1, 2),
+            get_cell(3, 2),
+            get_cell(3, 0),
         ];
         if Board::check_cell_is_winning(&mut diagonal_cells) {
             return Some(diagonal_cells);
         }
-
-
 
         None
     }
 
-    pub fn check_cell_is_winning(cells: &mut Vec<&Cell>) -> bool {
+    pub fn check_cell_is_winning(cells: &mut Vec<Cell>) -> bool {
         if !cells.into_iter().all(|f| f.piece.is_some()) {
             return false;
         }
@@ -234,7 +241,8 @@ impl Board {
     }
 
     pub fn hightlight_winning_cells(cells: &mut Vec<Cell>) {
-        cells.into_iter().for_each(|c| c.background_color = CellColor::Green);
+        // cells.into_iter().for_each(|c| c.background_color = CellColor::Green);
+        // cells.into_iter().for_each(|c| c.piece.unwrap())
     }
 }
 
@@ -314,10 +322,16 @@ impl Display for Board {
         let mut table_board = pTable::new();
         current_row = pRow::empty();
         for (i, cell) in self.cells.iter() {
-            current_row.add_cell(pCell::new_align(
+            let mut draw_cell = pCell::new_align(
                 format!("{:0>2}\n{}", i + 1, cell.to_string().as_str()).as_str(),
                 prettytable::format::Alignment::CENTER,
-            ));
+            );
+            //If it's a winning cell, draw the background
+            //if cell.background_color == CellColor::Green {
+            draw_cell.style(prettytable::Attr::ForegroundColor(2));
+            //}
+
+            current_row.add_cell(draw_cell);
             if (i + 1) % WIDTH_BOARD == 0 {
                 table_board.add_row(current_row);
                 current_row = pRow::empty();

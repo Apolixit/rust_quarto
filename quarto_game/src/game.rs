@@ -2,6 +2,7 @@ use std::fmt::Display;
 
 use crate::{board::Board, error::ErrorGame, piece::Piece};
 
+/// Represent a player (humain or AI)
 pub struct Player {
     pub name: String,
     pub score: Option<u8>,
@@ -16,6 +17,7 @@ impl Player {
     }
 }
 
+/// Display the name and score of the player
 impl Display for Player {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name)
@@ -23,18 +25,25 @@ impl Display for Player {
 }
 
 pub struct Game {
+    /// The Quarto board
     board: Board,
+
+    /// The 2 players of the game
     players: [Player; 2],
+
+    /// Current index player (I used index to avoid to borrow player and have to introduce lifetime)
     current_index_player: usize,
 }
 
 impl Game {
+    /// Add player to the game
     fn add_player(p1: Player, p2: Player) -> [Player; 2] {
         [p1, p2]
     }
 }
 
 impl Game {
+    /// Start a new game
     pub fn new(p1_name: &str, p2_name: &str) -> Game {
         Game {
             board: Board::create(),
@@ -43,32 +52,37 @@ impl Game {
         }
     }
 
+    /// Borrow the board
     pub fn get_board(&self) -> &Board {
         &self.board
     }
 
+    /// Borrow the board mutable
     pub fn get_board_mut(&mut self) -> &mut Board {
         &mut self.board
     }
 
+    /// Get a player by his index
     pub fn get_player(&self, index: usize) -> &Player {
         &self.players[index]
     }
 
+    /// Get the current player
     pub fn current_player(&self) -> &Player {
         &self.players[self.current_index_player]
     }
 
+    /// Get the player which is not currently playing
     pub fn opponent_player(&self) -> &Player {
         &self.players[(self.current_index_player as isize - 1).abs() as usize]
     }
 
-    ///Switch the current player to the other
+    /// Switch the current player to the other
     pub fn switch_current_player(&mut self) {
         self.current_index_player = (self.current_index_player as isize - 1).abs() as usize;
     }
 
-    ///Play a turn with cell selected
+    /// Play a turn with cell selected
     pub fn play(&mut self, piece: &Piece, cell_index: usize) -> Result<Piece, ErrorGame> {
         let piece_index = self
             .board

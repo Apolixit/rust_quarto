@@ -2,6 +2,7 @@
 name = "quarto_game"
 version = "0.1.0"
 edition = "2021"
+authors = ["Romain FRIOT <friotromain@gmail.com>"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -12,3 +13,5 @@ ansi_term = "0.12.1"
 enum-iterator = "0.7.0"
 log = "0.4.16"
 console_log = { version = "0.2", optional = true, features = ["color"] }
+env_logger = "0.9.0"
+cfg-if = "1.0.0"

@@ -1,7 +1,7 @@
 use crate::error::ErrorGame;
 use ansi_term::Style;
 use enum_iterator::IntoEnumIterator;
-use log::{error, info};
+use log::error;
 use std::{
     collections::BTreeMap,
     fmt::Display,
@@ -9,7 +9,7 @@ use std::{
     panic,
 };
 
-use prettytable::{color as pColor, Attr as pAttr, Cell as pCell, Row as pRow, Table as pTable};
+use prettytable::{Cell as pCell, Row as pRow, Table as pTable};
 
 use crate::piece::{Color, Height, Hole, Piece, PieceFeature, Shape};
 
@@ -25,7 +25,7 @@ pub struct Board {
 }
 
 impl Board {
-    ///Generate all pieces of the game
+    /// Generate all pieces of the game
     fn generate_all_pieces() -> BTreeMap<usize, Piece> {
         let mut pieces = BTreeMap::new();
         let mut key = 0;
@@ -42,6 +42,7 @@ impl Board {
             }
         }
 
+        trace!("All pieces have been generated");
         pieces
     }
 
@@ -66,6 +67,7 @@ impl Board {
             key += 1;
         }
 
+        trace!("All cells have been generated");
         cells
     }
 
@@ -95,13 +97,21 @@ impl Board {
         }
     }
 
+    /// Do we have piece to play ?
+    pub fn has_piece_available_to_play(&self) -> bool {
+        self.get_available_pieces().len() > 0
+    }
 
-
+    /// Play a piece on the board
+    /// Piece and cell are identify by their index in the HashMap
     pub fn play_piece(
         &mut self,
         piece_index: usize,
         cell_index: usize,
     ) -> Result<Piece, ErrorGame> {
+        if !self.has_piece_available_to_play() {
+            return Err(ErrorGame::PieceDoesNotBelongPlayable);
+        }
         if !self.cells.contains_key(&cell_index) {
             error!("Try to play in cell num {} - out of bound", cell_index);
             return Err(ErrorGame::IndexOutOfBound);
@@ -112,7 +122,7 @@ impl Board {
             .get(&piece_index)
             .ok_or(ErrorGame::PieceDoesNotBelongPlayable)?;
 
-        info!(
+        trace!(
             "Cell before playing : {}",
             self.cells.get(&cell_index).unwrap()
         );
@@ -125,7 +135,7 @@ impl Board {
             .entry(cell_index)
             .and_modify(|f| f.piece = Some(*piece));
 
-        info!(
+        trace!(
             "Cell after playing : {}",
             self.cells.get(&cell_index).unwrap()
         );
@@ -133,6 +143,7 @@ impl Board {
         Ok(*piece)
     }
 
+    /// Remove the piece from available playable list
     pub fn remove_piece(&mut self, index: usize) -> Result<Piece, ErrorGame> {
         // info!("Piece num {} remove from availables", index);
         self.available_pieces
@@ -140,15 +151,19 @@ impl Board {
             .ok_or(ErrorGame::PieceDoesNotExists)
     }
 
+    /// Get the list of available piece that can be played
     pub fn get_available_pieces(&self) -> BTreeMap<usize, Piece> {
         self.available_pieces.clone()
     }
 
+    /// Get the piece from the available stack
     pub fn get_piece_from_available(&self, index: usize) -> Result<&Piece, ErrorGame> {
         self.available_pieces
             .get(&index)
             .ok_or(ErrorGame::PieceDoesNotBelongPlayable)
     }
+
+    /// Get the piece index
     pub fn get_piece_index(&self, piece: &Piece) -> Result<usize, ErrorGame> {
         self.get_available_pieces()
             .into_iter()
@@ -160,19 +175,19 @@ impl Board {
         &self.cells
     }
 
+    /// Scan the board and check if a position is winning.
+    /// Return None if no winning position has been found
+    /// Return Some() with the list of winning cells
     pub fn is_board_winning(&self) -> Option<Vec<Cell>> {
         //Helper closure to get the ownership of the cell
         let get_cell = |x, y| *self.cells.get(&Board::get_index(x, y).unwrap()).unwrap();
 
         //Horizontal check
         for i in 0..WIDTH_BOARD {
-            // println!("x_x");
             let mut horizontal_cells: Vec<Cell> = Vec::with_capacity(HEIGHT_BOARD);
             'y_x: for j in 0..HEIGHT_BOARD {
                 //If the cell is empty -> break this loop iteration
-                let current_cell = get_cell(j, i); //*self.cells.get(&Board::get_index(j, i).unwrap()).unwrap();
-                                                   // println!("Current cell : {} / current index : {}", current_cell, Board::get_index(j, i).unwrap());
-
+                let current_cell = get_cell(j, i);
                 if let None = current_cell.piece {
                     // println!("Cell empty, break");
                     break 'y_x;
@@ -182,7 +197,7 @@ impl Board {
 
             // if horizontal_cells.len() == WIDTH_BOARD
             if Board::check_cell_is_winning(&mut horizontal_cells) {
-                // println!("Winnnn horizontal_cells");
+                info!("Horizontal win with cells {:?}", horizontal_cells);
                 return Some(horizontal_cells);
             }
         }
@@ -199,7 +214,7 @@ impl Board {
             }
 
             if Board::check_cell_is_winning(&mut vertical_cells) {
-                // println!("Winnnn vertical_cells");
+                info!("Vertical win with cells {:?}", vertical_cells);
                 return Some(vertical_cells);
             }
         }
@@ -212,6 +227,7 @@ impl Board {
             get_cell(3, 3),
         ];
         if Board::check_cell_is_winning(&mut diagonal_cells) {
+            info!("Diagonal win with cells {:?}", diagonal_cells);
             return Some(diagonal_cells);
         }
 
@@ -222,27 +238,28 @@ impl Board {
             get_cell(3, 0),
         ];
         if Board::check_cell_is_winning(&mut diagonal_cells) {
+            info!("Diagonal win with cells {:?}", diagonal_cells);
             return Some(diagonal_cells);
         }
 
         None
     }
 
+    // pub fn get_hashmap_from_vec(self, v: Vec<Cell>) -> BTreeMap<usize, Cell> {
+    //     let filtered: BTreeMap<usize, Cell> = self.cells.into_iter().filter(|&(_, c)| v.contains(&c)).collect();
+    //     filtered
+    // }
+
     pub fn check_cell_is_winning(cells: &mut Vec<Cell>) -> bool {
         if !cells.into_iter().all(|f| f.piece.is_some()) {
+            warn!("check_cell_is_winning : some cells are empty");
             return false;
         }
-        // println!("All cells are filled");
 
         let mut pieces: Vec<Piece> = cells.into_iter().map(|c| c.piece.unwrap()).collect();
         let is_win = Piece::check_piece_is_winning(&mut pieces);
 
         is_win
-    }
-
-    pub fn hightlight_winning_cells(cells: &mut Vec<Cell>) {
-        // cells.into_iter().for_each(|c| c.background_color = CellColor::Green);
-        // cells.into_iter().for_each(|c| c.piece.unwrap())
     }
 }
 
@@ -269,6 +286,7 @@ impl IndexMut<usize> for Board {
     }
 }
 
+/// Draw the board
 impl Display for Board {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let pieces_feature = Color::to_vec_boxed()
@@ -344,10 +362,12 @@ impl Display for Board {
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Cell {
+    /// Determine if a piece is present on the cell or not
     pub piece: Option<Piece>,
     pub background_color: CellColor,
 }
 
+/// Draw a cell
 impl Display for Cell {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(

@@ -1,10 +1,18 @@
 use std::fmt::Display;
 
+/// Represent the different errors which could happen during the game
 #[derive(Debug, PartialEq)]
 pub enum ErrorGame {
+    /// Try to play outside the board
     IndexOutOfBound,
+
+    /// The piece doesn't exist (should never happen)
     PieceDoesNotExists,
+
+    /// The piece has already been played
     PieceDoesNotBelongPlayable,
+
+    /// A piece has already been played on this cell
     CellIsNotEmpty,
 }
 

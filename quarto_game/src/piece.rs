@@ -2,15 +2,24 @@ use ansi_term::Colour as ConsoleColor;
 use enum_iterator::IntoEnumIterator;
 use std::fmt::Display;
 
+/// Trait impleted by all type which caratcterise a piece
 pub trait PieceFeature {
+    /// The acronym display on the board
     fn acronym(&self) -> &str;
+
+    /// The full name of the piece
     fn name(&self) -> &str;
+
+    /// The color display on the board
     fn color(&self) -> ConsoleColor;
+
+    /// Dynamic box which allow to iterate on each type of piece dynamically
     fn to_vec_boxed() -> Vec<Box<dyn PieceFeature>>
     where
         Self: Sized;
 }
 
+/// The color type of a piece
 #[derive(Debug, Clone, Copy, Eq, PartialEq, IntoEnumIterator)]
 pub enum Color {
     White,
@@ -57,6 +66,7 @@ impl From<&str> for Color {
     }
 }
 
+/// The hole type of a piece
 #[derive(Debug, Clone, Copy, Eq, PartialEq, IntoEnumIterator)]
 pub enum Hole {
     Empty,
@@ -102,6 +112,7 @@ impl From<&str> for Hole {
     }
 }
 
+/// The height type of a piece
 #[derive(Debug, Clone, Copy, Eq, PartialEq, IntoEnumIterator)]
 pub enum Height {
     Small,
@@ -148,6 +159,7 @@ impl From<&str> for Height {
     }
 }
 
+/// The shape type of a piece
 #[derive(Debug, Clone, Copy, Eq, PartialEq, IntoEnumIterator)]
 pub enum Shape {
     Circle,
@@ -204,6 +216,7 @@ pub struct Piece {
 }
 
 impl Piece {
+    /// Create a new piece
     pub fn new(color: Color, hole: Hole, height: Height, shape: Shape) -> Self {
         Self {
             color,
@@ -213,6 +226,7 @@ impl Piece {
         }
     }
 
+    /// Check if the piece vector is a winning combinaison
     pub fn check_piece_is_winning(pieces: &mut Vec<Piece>) -> bool {
         //We need at least a 4 size vector
         if pieces.len() < 4 { return false; }

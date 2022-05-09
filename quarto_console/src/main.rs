@@ -1,10 +1,17 @@
+use ansi_term::{Colour, Style};
+use quarto_game::{board::Board, game::Game};
 use std::io;
 
-use ansi_term::Style;
-use quarto_game::{board::Board, game::Game};
-
 fn main() {
-    println!("Welcome to Quarto game");
+    quarto_game::init();
+
+    println!(
+        "{}",
+        Style::new()
+            .fg(Colour::RGB(144, 255, 10))
+            .bold()
+            .paint("Welcome to Quarto game")
+    );
 
     'main: loop {
         let p1_name = read_input_string("Player 1 name :");
@@ -49,21 +56,32 @@ fn main() {
                 }
             }
 
-
             if let Some(mut winning_cells) = game.get_board().is_board_winning() {
                 //if the game is win, we color the background cell to highlight the good combinaison
-                Board::hightlight_winning_cells(&mut winning_cells);
+                //Board::hightlight_winning_cells(&mut winning_cells);
 
                 //We display the board for the last time to show the winning combinaison
                 println!("{}", game.get_board());
 
-                println!("{} win the game !", Style::new().bold().underline().paint(game.current_player().to_string()));
+                println!(
+                    "{} win the game with combinaison : {:?}",
+                    Style::new()
+                        .bold()
+                        .underline()
+                        .paint(game.current_player().to_string()),
+                    winning_cells
+                );
 
                 break 'game;
             }
 
-            //No winner, let's continue
-            game.switch_current_player();
+            // Is it a draw ?
+            if !game.get_board().has_piece_available_to_play() {
+                println!("Draw ! No winner for this game, well played.")
+            } else {
+                //No winner, let's continue
+                game.switch_current_player();
+            }
         }
 
         println!("Start a new game ?");
@@ -83,8 +101,8 @@ fn read_input_string(label: &str) -> String {
                 name_buffer, e
             );
         } else {
-            name_buffer.truncate(name_buffer.len() - 1); //To remove \ns
-            return name_buffer;
+            // name_buffer.truncate(name_buffer.len() - 1); //To remove \ns
+            return name_buffer.trim().to_string();
         }
     }
 }

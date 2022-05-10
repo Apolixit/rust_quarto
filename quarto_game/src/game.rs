@@ -84,12 +84,7 @@ impl Game {
 
     /// Play a turn with cell selected
     pub fn play(&mut self, piece: &Piece, cell_index: usize) -> Result<Piece, ErrorGame> {
-        let piece_index = self
-            .board
-            .get_available_pieces()
-            .into_iter()
-            .position(|pos| pos.1 == *piece)
-            .ok_or(ErrorGame::PieceDoesNotExists)?;
+        let piece_index = self.board.get_piece_index(piece)?;
 
         self.play_index(piece_index, cell_index)
     }

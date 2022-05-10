@@ -17,6 +17,19 @@ const WIDTH_BOARD: usize = 4;
 const HEIGHT_BOARD: usize = 4;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
+/// Represent the state of the game
+pub enum BoardState {
+    /// No current winner and game currently in progress
+    GameInProgress,
+
+    /// We found a win combinaison
+    Win(BTreeMap<usize, Cell>),
+
+    /// No piece left, it's a draw
+    Draw,
+}
+
+#[derive(Clone, Eq, PartialEq)]
 pub struct Board {
     /// The x16 cells of the board
     cells: BTreeMap<usize, Cell>,
@@ -80,6 +93,7 @@ impl Board {
     }
 
     /// Return (x; y) from index
+    #[allow(dead_code)]
     fn get_cell_coordinate(index: usize) -> Option<(usize, usize)> {
         if index >= WIDTH_BOARD * HEIGHT_BOARD {
             return None;
@@ -97,9 +111,10 @@ impl Board {
         }
     }
 
-    /// Do we have piece to play ?
-    pub fn has_piece_available_to_play(&self) -> bool {
+    /// Can we play an other turn ?
+    pub fn can_play_another_turn(&self) -> bool {
         self.get_available_pieces().len() > 0
+            || self.get_cells().into_iter().any(|c| c.1.piece.is_none())
     }
 
     /// Play a piece on the board
@@ -109,7 +124,7 @@ impl Board {
         piece_index: usize,
         cell_index: usize,
     ) -> Result<Piece, ErrorGame> {
-        if !self.has_piece_available_to_play() {
+        if !self.can_play_another_turn() {
             return Err(ErrorGame::PieceDoesNotBelongPlayable);
         }
         if !self.cells.contains_key(&cell_index) {
@@ -145,7 +160,7 @@ impl Board {
 
     /// Remove the piece from available playable list
     pub fn remove_piece(&mut self, index: usize) -> Result<Piece, ErrorGame> {
-        // info!("Piece num {} remove from availables", index);
+        trace!("Piece num {} remove from availables", index);
         self.available_pieces
             .remove(&index)
             .ok_or(ErrorGame::PieceDoesNotExists)
@@ -167,7 +182,7 @@ impl Board {
     pub fn get_piece_index(&self, piece: &Piece) -> Result<usize, ErrorGame> {
         self.get_available_pieces()
             .into_iter()
-            .position(|pos| pos.1 == *piece)
+            .find_map(|(i, p)| if &p == piece { Some(i) } else { None })
             .ok_or(ErrorGame::PieceDoesNotExists)
     }
 
@@ -178,7 +193,12 @@ impl Board {
     /// Scan the board and check if a position is winning.
     /// Return None if no winning position has been found
     /// Return Some() with the list of winning cells
-    pub fn is_board_winning(&self) -> Option<Vec<Cell>> {
+    pub fn board_state(&self) -> BoardState {
+        // First of all, do we have any piece to play ?
+        if !self.can_play_another_turn() {
+            return BoardState::Draw;
+        }
+
         //Helper closure to get the ownership of the cell
         let get_cell = |x, y| *self.cells.get(&Board::get_index(x, y).unwrap()).unwrap();
 
@@ -198,7 +218,7 @@ impl Board {
             // if horizontal_cells.len() == WIDTH_BOARD
             if Board::check_cell_is_winning(&mut horizontal_cells) {
                 info!("Horizontal win with cells {:?}", horizontal_cells);
-                return Some(horizontal_cells);
+                return BoardState::Win(self.to_btree(horizontal_cells));
             }
         }
 
@@ -215,7 +235,7 @@ impl Board {
 
             if Board::check_cell_is_winning(&mut vertical_cells) {
                 info!("Vertical win with cells {:?}", vertical_cells);
-                return Some(vertical_cells);
+                return BoardState::Win(self.to_btree(vertical_cells));
             }
         }
 
@@ -228,7 +248,7 @@ impl Board {
         ];
         if Board::check_cell_is_winning(&mut diagonal_cells) {
             info!("Diagonal win with cells {:?}", diagonal_cells);
-            return Some(diagonal_cells);
+            return BoardState::Win(self.to_btree(diagonal_cells));
         }
 
         let mut diagonal_cells: Vec<Cell> = vec![
@@ -239,16 +259,20 @@ impl Board {
         ];
         if Board::check_cell_is_winning(&mut diagonal_cells) {
             info!("Diagonal win with cells {:?}", diagonal_cells);
-            return Some(diagonal_cells);
+            return BoardState::Win(self.to_btree(diagonal_cells));
         }
 
-        None
+        BoardState::GameInProgress
     }
 
-    // pub fn get_hashmap_from_vec(self, v: Vec<Cell>) -> BTreeMap<usize, Cell> {
-    //     let filtered: BTreeMap<usize, Cell> = self.cells.into_iter().filter(|&(_, c)| v.contains(&c)).collect();
-    //     filtered
-    // }
+    /// Do the reverse mapping by filtering  the original BTree from the Vec in parameter
+    pub fn to_btree(&self, v: Vec<Cell>) -> BTreeMap<usize, Cell> {
+        self.cells
+            .clone()
+            .into_iter()
+            .filter(|&(_, c)| v.contains(&c))
+            .collect()
+    }
 
     pub fn check_cell_is_winning(cells: &mut Vec<Cell>) -> bool {
         if !cells.into_iter().all(|f| f.piece.is_some()) {
@@ -451,7 +475,7 @@ mod tests {
     }
 
     #[test]
-    fn test_play_piece_cell_not_empty() {
+    fn test_play_piece_cell_should_not_be_empty() {
         const INDEX_PIECE: usize = 0;
         const INDEX_CELL: usize = 0;
         let mut board = Board::create();
@@ -467,7 +491,7 @@ mod tests {
     }
 
     #[test]
-    fn test_play_piece_founded_after_played() {
+    fn test_play_piece_founded_after_played_should_succeed() {
         const INDEX_PIECE: usize = 0;
         const INDEX_CELL: usize = 0;
         let mut board = Board::create();
@@ -478,7 +502,7 @@ mod tests {
     }
 
     #[test]
-    fn test_remove_piece() {
+    fn test_remove_piece_should_succeed() {
         const INDEX_PIECE: usize = 0;
         let mut board = Board::create();
 
@@ -501,31 +525,69 @@ mod tests {
     }
 
     #[test]
-    fn test_is_board_winning_vertical() {
+    fn test_find_piece_index_should_succeed() {
         let mut board = Board::create();
 
-        //Play the first piece in first cell of the board
-        board.play_piece(0, 3).unwrap();
-        board.play_piece(4, 7).unwrap();
-        board.play_piece(2, 11).unwrap();
-        board.play_piece(3, 15).unwrap();
+        let p1 = Piece::from("DEXC"); // index 8
+        let p2 = Piece::from("DEXS"); // index 9
+        let p3 = Piece::from("DETC"); // index 10
+        let p4 = Piece::from("DETS"); // index 11
 
-        let maybe_cell_winning = board.is_board_winning();
-        assert_ne!(maybe_cell_winning, None);
+        assert_eq!(board.get_piece_index(&p1).unwrap(), 8);
+        assert_eq!(board.get_piece_index(&p1).unwrap(), 8);
+        assert_eq!(board.get_piece_index(&p2).unwrap(), 9);
+        assert_eq!(board.get_piece_index(&p3).unwrap(), 10);
+        assert_eq!(board.get_piece_index(&p4).unwrap(), 11);
+        assert_eq!(board.get_piece_index(&p4).unwrap(), 11);
+        assert_eq!(board.get_piece_index(&p4).unwrap(), 11);
+
+        //Now we remove each piece from available pool of piece
+        assert_eq!(board.get_piece_index(&p1).unwrap(), 8);
+        board.remove_piece(8).unwrap();
+        assert_eq!(board.get_piece_index(&p2).unwrap(), 9);
+        board.remove_piece(9).unwrap();
+        assert_eq!(board.get_piece_index(&p3).unwrap(), 10);
+        board.remove_piece(10).unwrap();
+        assert_eq!(board.get_piece_index(&p4).unwrap(), 11);
+        board.remove_piece(11).unwrap();
+    }
+
+    #[test]
+    fn test_is_board_winning_vertical_should_win() {
+        let mut board = Board::create();
+        let plays: Vec<(usize, usize)> = vec![(0, 3), (4, 7), (2, 11), (3, 15)];
+
+        //Play the first piece in first cell of the board
+        for play in &plays {
+            board.play_piece(play.0, play.1).unwrap();
+        }
+
+        let mut btree_win: BTreeMap<usize, Cell> = BTreeMap::new();
+        for play in &plays {
+            btree_win.insert(play.1, *board.cells.get(&play.1).unwrap());
+        }
+
+        let maybe_cell_winning = board.board_state();
+        assert_eq!(maybe_cell_winning, BoardState::Win(btree_win));
     }
 
     #[test]
     fn test_is_board_winning_horizontal() {
         let mut board = Board::create();
+        let plays: Vec<(usize, usize)> = vec![(0, 0), (4, 1), (2, 2), (3, 3)];
+        let mut btree_win: BTreeMap<usize, Cell> = BTreeMap::new();
 
         //Play the first piece in first cell of the board
-        board.play_piece(0, 0).unwrap();
-        board.play_piece(4, 1).unwrap();
-        board.play_piece(2, 2).unwrap();
-        board.play_piece(3, 3).unwrap();
+        for play in &plays {
+            board.play_piece(play.0, play.1).unwrap();
+        }
 
-        let maybe_cell_winning = board.is_board_winning();
-        assert_ne!(maybe_cell_winning, None);
+        for play in &plays {
+            btree_win.insert(play.1, *board.cells.get(&play.1).unwrap());
+        }
+
+        let maybe_cell_winning = board.board_state();
+        assert_eq!(maybe_cell_winning, BoardState::Win(btree_win));
     }
 
     #[test]
@@ -534,8 +596,8 @@ mod tests {
 
         //Play the first piece in first cell of the board
         board.play_piece(8, 0).unwrap();
-        let maybe_cell_winning = board.is_board_winning();
-        assert_eq!(maybe_cell_winning, None);
+        let maybe_cell_winning = board.board_state();
+        assert_eq!(maybe_cell_winning, BoardState::GameInProgress);
 
         let mut board = Board::create();
 
@@ -545,7 +607,44 @@ mod tests {
         board.play_piece(2, 2).unwrap();
         board.play_piece(3, 4).unwrap();
 
-        let maybe_cell_winning = board.is_board_winning();
-        assert_eq!(maybe_cell_winning, None);
+        let maybe_cell_winning = board.board_state();
+        assert_eq!(maybe_cell_winning, BoardState::GameInProgress);
+    }
+
+    #[test]
+    fn test_board_draw() {
+        let mut board = Board::create();
+
+        // Cell Index, Piece
+        let pieces: Vec<Piece> = vec![
+            Piece::from("WETS"),
+            Piece::from("DFTC"),
+            Piece::from("DFTS"),
+            Piece::from("DFXS"),
+            Piece::from("WFTS"),
+            Piece::from("WFXS"),
+            Piece::from("DETS"),
+            Piece::from("DFXC"),
+            Piece::from("WFXC"),
+            Piece::from("DEXS"),
+            Piece::from("WEXC"),
+            Piece::from("WETC"),
+            Piece::from("DETC"),
+            Piece::from("WFTC"),
+            Piece::from("WEXS"),
+            Piece::from("DEXC"),
+        ];
+
+        //Play the first piece in first cell of the board
+        for play in (0..16).zip(pieces) {
+            let piece_index = board.get_piece_index(&play.1).unwrap();
+            board.play_piece(piece_index, play.0).unwrap();
+            board.remove_piece(piece_index).unwrap();
+        }
+
+        println!("{}", board);
+
+        let maybe_cell_winning = board.board_state();
+        assert_eq!(maybe_cell_winning, BoardState::Draw);
     }
 }

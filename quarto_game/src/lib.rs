@@ -1,4 +1,3 @@
-use log::*;
 use cfg_if::cfg_if;
 
 #[macro_use] extern crate log;

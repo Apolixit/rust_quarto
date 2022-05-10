@@ -1,5 +1,8 @@
 use ansi_term::{Colour, Style};
-use quarto_game::{board::Board, game::Game};
+use quarto_game::{
+    board::{BoardState},
+    game::Game,
+};
 use std::io;
 
 fn main() {
@@ -13,7 +16,7 @@ fn main() {
             .paint("Welcome to Quarto game")
     );
 
-    'main: loop {
+    loop {
         let p1_name = read_input_string("Player 1 name :");
         let p2_name = read_input_string("Player 2 name :");
 
@@ -27,7 +30,7 @@ fn main() {
         'game: loop {
             println!("{}", game.get_board());
 
-            'select_action: loop {
+            loop {
                 let piece_key = read_input_index(
                     format!(
                         "{} choose a piece for {}\nEnter the piece number : ",
@@ -56,31 +59,30 @@ fn main() {
                 }
             }
 
-            if let Some(mut winning_cells) = game.get_board().is_board_winning() {
-                //if the game is win, we color the background cell to highlight the good combinaison
-                //Board::hightlight_winning_cells(&mut winning_cells);
+            match game.get_board().board_state() {
+                BoardState::GameInProgress => {
+                    //No winner, let's continue
+                    game.switch_current_player();
+                }
+                BoardState::Win(winning_cells) => {
+                    //We display the board for the last time to show the winning combinaison
+                    println!("{}", game.get_board());
 
-                //We display the board for the last time to show the winning combinaison
-                println!("{}", game.get_board());
+                    let win_position: Vec<usize> = winning_cells.into_iter().map(|f| f.0).collect();
+                    println!(
+                        "{} win the game with combinaison : {:?}",
+                        Style::new()
+                            .bold()
+                            .underline()
+                            .paint(game.current_player().to_string()),
+                            win_position
+                    );
 
-                println!(
-                    "{} win the game with combinaison : {:?}",
-                    Style::new()
-                        .bold()
-                        .underline()
-                        .paint(game.current_player().to_string()),
-                    winning_cells
-                );
-
-                break 'game;
-            }
-
-            // Is it a draw ?
-            if !game.get_board().has_piece_available_to_play() {
-                println!("Draw ! No winner for this game, well played.")
-            } else {
-                //No winner, let's continue
-                game.switch_current_player();
+                    break 'game;
+                },
+                BoardState::Draw => {
+                    println!("Draw ! No winner for this game, well played.")
+                }
             }
         }
 

@@ -183,7 +183,7 @@ impl Board {
         self.get_available_pieces()
             .into_iter()
             .find_map(|(i, p)| if &p == piece { Some(i) } else { None })
-            .ok_or(ErrorGame::PieceDoesNotExists)
+            .ok_or(ErrorGame::PieceDoesNotBelongPlayable)
     }
 
     pub fn get_cells(&self) -> &BTreeMap<usize, Cell> {

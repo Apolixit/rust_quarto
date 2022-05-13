@@ -40,6 +40,12 @@ fn main() {
                     .as_str(),
                 );
 
+                // Check if the piece is always available
+                if let Err(e) = game.get_board().get_piece_from_available(piece_key) {
+                    println!("{}", e);
+                    continue;
+                }
+
                 let cell_key = read_input_index(
                     format!(
                         "{} on which case do you wanna play the piece {} ?",
@@ -52,7 +58,7 @@ fn main() {
                 );
 
                 if let Err(e) = game.play_index(piece_key, cell_key) {
-                    println!("Error : {}", e);
+                    println!("{}", e);
                     continue;
                 } else {
                     break;
@@ -117,7 +123,7 @@ fn read_input_index(label: &str) -> usize {
 
         if let Err(e) = n_input {
             println!(
-                "Impossible de convert {} to number, please try again (error = {})",
+                "Impossible to convert {} to number, please try again (error = {})",
                 s_input, e
             );
         } else {

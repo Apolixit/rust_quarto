@@ -19,9 +19,9 @@ pub enum ErrorGame {
 impl ErrorGame {
     pub fn message(&self) -> &str {
         match self {
-            Self::IndexOutOfBound => "Index out of bound",
-            Self::PieceDoesNotExists => "Piece does not exists",
-            Self::PieceDoesNotBelongPlayable => "Piece has already been played",
+            Self::IndexOutOfBound => "The index is out of bound",
+            Self::PieceDoesNotExists => "This piece does not exists",
+            Self::PieceDoesNotBelongPlayable => "This piece has already been played",
             Self::CellIsNotEmpty => "The cell is not empty",
         }
     }

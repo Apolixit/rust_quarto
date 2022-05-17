@@ -74,7 +74,7 @@ fn main() {
                     //We display the board for the last time to show the winning combinaison
                     println!("{}", game.get_board());
 
-                    let win_position: Vec<usize> = winning_cells.into_iter().map(|f| f.0).collect();
+                    let win_position: Vec<usize> = winning_cells.into_iter().map(|(position, _)| position + 1).collect();
                     println!(
                         "{} win the game with combinaison : {:?}",
                         Style::new()

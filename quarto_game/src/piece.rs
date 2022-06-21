@@ -19,6 +19,13 @@ pub trait PieceFeature {
         Self: Sized;
 }
 
+pub enum Carac {
+    Color,
+    Shape,
+    Hole,
+    Height
+}
+
 /// The color type of a piece
 #[derive(Debug, Clone, Copy, Eq, PartialEq, IntoEnumIterator)]
 pub enum Color {
@@ -226,6 +233,17 @@ impl Piece {
         }
     }
 
+    // fn common_carac<P>(pieces: &Vec<Piece>, p: P) -> usize 
+    //     where P: FnMut(&Piece) -> bool
+    // {
+    //     pieces.into_iter().filter(p);
+    // }
+
+    // pub fn check_pieces_common_carac<T>(pieces: &Vec<Piece>) -> (Option<Carac>, usize)
+    // {
+    //     pieces.into_iter().filter(|f| f.color == Color::Dark)
+    // }
+    
     /// Check if the piece vector is a winning combinaison
     pub fn check_piece_is_winning(pieces: &mut Vec<Piece>) -> bool {
         //We need at least a 4 size vector
@@ -237,7 +255,7 @@ impl Piece {
             pieces.into_iter().all(|p| p.height == Height::Small),
             pieces.into_iter().all(|p| p.height == Height::Tall),
             pieces.into_iter().all(|p| p.hole == Hole::Empty),
-            pieces.into_iter().all(|p| p.hole == Hole::Empty),
+            pieces.into_iter().all(|p| p.hole == Hole::Full),
             pieces.into_iter().all(|p| p.shape == Shape::Circle),
             pieces.into_iter().all(|p| p.shape == Shape::Square),
         ];

@@ -6,6 +6,7 @@ pub mod game;
 pub mod board;
 pub mod piece;
 pub mod error;
+pub mod ai;
 
 cfg_if! {
     if #[cfg(feature = "console_log")] {

@@ -13,8 +13,8 @@ use prettytable::{Cell as pCell, Row as pRow, Table as pTable};
 
 use crate::piece::{Color, Height, Hole, Piece, PieceFeature, Shape};
 
-const WIDTH_BOARD: usize = 4;
-const HEIGHT_BOARD: usize = 4;
+pub const WIDTH_BOARD: usize = 4;
+pub const HEIGHT_BOARD: usize = 4;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 /// Represent the state of the game
@@ -190,6 +190,10 @@ impl Board {
         &self.cells
     }
 
+    pub fn get_cells_from_position(&self, x: usize, y: usize) -> Cell {
+        *self.cells.get(&Board::get_index(x, y).unwrap()).unwrap()
+    }
+
     /// Scan the board and check if a position is winning.
     /// Return None if no winning position has been found
     /// Return Some() with the list of winning cells
@@ -200,22 +204,20 @@ impl Board {
         }
 
         //Helper closure to get the ownership of the cell
-        let get_cell = |x, y| *self.cells.get(&Board::get_index(x, y).unwrap()).unwrap();
+        // let get_cell = |x, y| *self.cells.get(&Board::get_index(x, y).unwrap()).unwrap();
 
         //Horizontal check
         for i in 0..WIDTH_BOARD {
             let mut horizontal_cells: Vec<Cell> = Vec::with_capacity(HEIGHT_BOARD);
             'y_x: for j in 0..HEIGHT_BOARD {
                 //If the cell is empty -> break this loop iteration
-                let current_cell = get_cell(j, i);
+                let current_cell = self.get_cells_from_position(j, i);
                 if let None = current_cell.piece {
-                    // println!("Cell empty, break");
                     break 'y_x;
                 }
                 horizontal_cells.push(current_cell);
             }
 
-            // if horizontal_cells.len() == WIDTH_BOARD
             if Board::check_cell_is_winning(&mut horizontal_cells) {
                 info!("Horizontal win with cells {:?}", horizontal_cells);
                 return BoardState::Win(self.to_btree(horizontal_cells));
@@ -226,7 +228,7 @@ impl Board {
             let mut vertical_cells: Vec<Cell> = Vec::with_capacity(HEIGHT_BOARD);
             'y_y: for j in 0..HEIGHT_BOARD {
                 //If the cell is empty -> break this loop iteration
-                let current_cell = get_cell(i, j); //*self.cells.get(&Board::get_index(i, j).unwrap()).unwrap();
+                let current_cell = self.get_cells_from_position(i, j); //*self.cells.get(&Board::get_index(i, j).unwrap()).unwrap();
                 if let None = current_cell.piece {
                     break 'y_y;
                 }
@@ -241,10 +243,10 @@ impl Board {
 
         //Diagonale
         let mut diagonal_cells: Vec<Cell> = vec![
-            get_cell(0, 0),
-            get_cell(1, 1),
-            get_cell(2, 2),
-            get_cell(3, 3),
+            self.get_cells_from_position(0, 0),
+            self.get_cells_from_position(1, 1),
+            self.get_cells_from_position(2, 2),
+            self.get_cells_from_position(3, 3),
         ];
         if Board::check_cell_is_winning(&mut diagonal_cells) {
             info!("Diagonal win with cells {:?}", diagonal_cells);
@@ -252,10 +254,10 @@ impl Board {
         }
 
         let mut diagonal_cells: Vec<Cell> = vec![
-            get_cell(0, 3),
-            get_cell(1, 2),
-            get_cell(3, 2),
-            get_cell(3, 0),
+            self.get_cells_from_position(0, 3),
+            self.get_cells_from_position(1, 2),
+            self.get_cells_from_position(3, 2),
+            self.get_cells_from_position(3, 0),
         ];
         if Board::check_cell_is_winning(&mut diagonal_cells) {
             info!("Diagonal win with cells {:?}", diagonal_cells);
@@ -276,7 +278,7 @@ impl Board {
 
     pub fn check_cell_is_winning(cells: &mut Vec<Cell>) -> bool {
         if !cells.into_iter().all(|f| f.piece.is_some()) {
-            warn!("check_cell_is_winning : some cells are empty");
+            trace!("check_cell_is_winning : some cells are empty");
             return false;
         }
 

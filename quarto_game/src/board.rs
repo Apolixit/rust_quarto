@@ -85,7 +85,7 @@ impl Board {
     }
 
     /// Return index from (x; y) coordinate
-    fn get_index(x: usize, y: usize) -> Option<usize> {
+    pub fn get_index(x: usize, y: usize) -> Option<usize> {
         if x >= WIDTH_BOARD || y >= HEIGHT_BOARD {
             return None;
         }
@@ -100,6 +100,18 @@ impl Board {
         }
         Some((index % WIDTH_BOARD, index / HEIGHT_BOARD))
     }
+
+    pub fn get_diagonal_cells(board: &Board) -> (Vec<Cell>, Vec<Cell>) {
+        let mut diagonal_cells_top_left_bottom_right: Vec<Cell> = vec![];
+        let mut diagonal_cells_top_right_bottom_left: Vec<Cell> = vec![];
+        for i in 0..WIDTH_BOARD {
+            diagonal_cells_top_left_bottom_right.push(board.get_cells_from_position(i, i));
+            diagonal_cells_top_right_bottom_left.push(board.get_cells_from_position(WIDTH_BOARD - i - 1, i));
+        }
+
+        (diagonal_cells_top_left_bottom_right, diagonal_cells_top_right_bottom_left)
+    }
+
 }
 
 impl Board {
@@ -203,12 +215,10 @@ impl Board {
             return BoardState::Draw;
         }
 
-        //Helper closure to get the ownership of the cell
-        // let get_cell = |x, y| *self.cells.get(&Board::get_index(x, y).unwrap()).unwrap();
-
         //Horizontal check
         for i in 0..WIDTH_BOARD {
             let mut horizontal_cells: Vec<Cell> = Vec::with_capacity(HEIGHT_BOARD);
+            let mut vertical_cells: Vec<Cell> = Vec::with_capacity(HEIGHT_BOARD);
             'y_x: for j in 0..HEIGHT_BOARD {
                 //If the cell is empty -> break this loop iteration
                 let current_cell = self.get_cells_from_position(j, i);
@@ -228,7 +238,7 @@ impl Board {
             let mut vertical_cells: Vec<Cell> = Vec::with_capacity(HEIGHT_BOARD);
             'y_y: for j in 0..HEIGHT_BOARD {
                 //If the cell is empty -> break this loop iteration
-                let current_cell = self.get_cells_from_position(i, j); //*self.cells.get(&Board::get_index(i, j).unwrap()).unwrap();
+                let current_cell = self.get_cells_from_position(i, j);
                 if let None = current_cell.piece {
                     break 'y_y;
                 }
@@ -242,26 +252,16 @@ impl Board {
         }
 
         //Diagonale
-        let mut diagonal_cells: Vec<Cell> = vec![
-            self.get_cells_from_position(0, 0),
-            self.get_cells_from_position(1, 1),
-            self.get_cells_from_position(2, 2),
-            self.get_cells_from_position(3, 3),
-        ];
-        if Board::check_cell_is_winning(&mut diagonal_cells) {
-            info!("Diagonal win with cells {:?}", diagonal_cells);
-            return BoardState::Win(self.to_btree(diagonal_cells));
+        let (mut diagonal_cells_top_left_bottom_right, mut diagonal_cells_top_right_bottom_left) = Board::get_diagonal_cells(&self);
+
+        if Board::check_cell_is_winning(&mut diagonal_cells_top_left_bottom_right) {
+            info!("Diagonal win with cells {:?}", diagonal_cells_top_left_bottom_right);
+            return BoardState::Win(self.to_btree(diagonal_cells_top_left_bottom_right));
         }
 
-        let mut diagonal_cells: Vec<Cell> = vec![
-            self.get_cells_from_position(0, 3),
-            self.get_cells_from_position(1, 2),
-            self.get_cells_from_position(3, 2),
-            self.get_cells_from_position(3, 0),
-        ];
-        if Board::check_cell_is_winning(&mut diagonal_cells) {
-            info!("Diagonal win with cells {:?}", diagonal_cells);
-            return BoardState::Win(self.to_btree(diagonal_cells));
+        if Board::check_cell_is_winning(&mut diagonal_cells_top_right_bottom_left) {
+            info!("Diagonal win with cells {:?}", diagonal_cells_top_right_bottom_left);
+            return BoardState::Win(self.to_btree(diagonal_cells_top_right_bottom_left));
         }
 
         BoardState::GameInProgress
@@ -423,6 +423,12 @@ mod tests {
         assert_eq!(Board::get_index(1, 0), Some(1));
         assert_eq!(Board::get_index(0, 3), Some(12));
         assert_eq!(Board::get_index(2, 2), Some(10));
+
+        assert_eq!(Board::get_index(3, 0).unwrap(), 3);
+        assert_eq!(Board::get_index(2, 1).unwrap(), 6);
+        assert_eq!(Board::get_index(1, 2).unwrap(), 9);
+        assert_eq!(Board::get_index(0, 3).unwrap(), 12);
+        
 
         assert_eq!(Board::get_index(4, 4), None);
     }

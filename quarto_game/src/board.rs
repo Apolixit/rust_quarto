@@ -106,12 +106,15 @@ impl Board {
         let mut diagonal_cells_top_right_bottom_left: Vec<Cell> = vec![];
         for i in 0..WIDTH_BOARD {
             diagonal_cells_top_left_bottom_right.push(board.get_cells_from_position(i, i));
-            diagonal_cells_top_right_bottom_left.push(board.get_cells_from_position(WIDTH_BOARD - i - 1, i));
+            diagonal_cells_top_right_bottom_left
+                .push(board.get_cells_from_position(WIDTH_BOARD - i - 1, i));
         }
 
-        (diagonal_cells_top_left_bottom_right, diagonal_cells_top_right_bottom_left)
+        (
+            diagonal_cells_top_left_bottom_right,
+            diagonal_cells_top_right_bottom_left,
+        )
     }
-
 }
 
 impl Board {
@@ -206,6 +209,13 @@ impl Board {
         *self.cells.get(&Board::get_index(x, y).unwrap()).unwrap()
     }
 
+    pub fn get_empty_cells(&self) -> BTreeMap<usize, Cell> {
+        self.cells
+            .into_iter()
+            .filter(|f| f.1.piece.is_none())
+            .collect()
+    }
+
     /// Scan the board and check if a position is winning.
     /// Return None if no winning position has been found
     /// Return Some() with the list of winning cells
@@ -252,15 +262,22 @@ impl Board {
         }
 
         //Diagonale
-        let (mut diagonal_cells_top_left_bottom_right, mut diagonal_cells_top_right_bottom_left) = Board::get_diagonal_cells(&self);
+        let (mut diagonal_cells_top_left_bottom_right, mut diagonal_cells_top_right_bottom_left) =
+            Board::get_diagonal_cells(&self);
 
         if Board::check_cell_is_winning(&mut diagonal_cells_top_left_bottom_right) {
-            info!("Diagonal win with cells {:?}", diagonal_cells_top_left_bottom_right);
+            info!(
+                "Diagonal win with cells {:?}",
+                diagonal_cells_top_left_bottom_right
+            );
             return BoardState::Win(self.to_btree(diagonal_cells_top_left_bottom_right));
         }
 
         if Board::check_cell_is_winning(&mut diagonal_cells_top_right_bottom_left) {
-            info!("Diagonal win with cells {:?}", diagonal_cells_top_right_bottom_left);
+            info!(
+                "Diagonal win with cells {:?}",
+                diagonal_cells_top_right_bottom_left
+            );
             return BoardState::Win(self.to_btree(diagonal_cells_top_right_bottom_left));
         }
 
@@ -286,6 +303,19 @@ impl Board {
         let is_win = Piece::check_piece_is_winning(&mut pieces);
 
         is_win
+    }
+
+    /// Return the list of the immediate available move from the current board
+    pub fn get_available_moves(&self) -> Vec<(usize, usize)> {
+        let mut available_next_move: Vec<(usize, usize)> = vec![];
+
+        for (index_piece, _) in &self.available_pieces {
+            for (index_cell, _) in &self.cells {
+                available_next_move.push((*index_piece, *index_cell));
+            }
+        }
+
+        available_next_move
     }
 }
 
@@ -428,7 +458,6 @@ mod tests {
         assert_eq!(Board::get_index(2, 1).unwrap(), 6);
         assert_eq!(Board::get_index(1, 2).unwrap(), 9);
         assert_eq!(Board::get_index(0, 3).unwrap(), 12);
-        
 
         assert_eq!(Board::get_index(4, 4), None);
     }

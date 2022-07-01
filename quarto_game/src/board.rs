@@ -12,6 +12,7 @@ use std::{
 use prettytable::{Cell as pCell, Row as pRow, Table as pTable};
 
 use crate::piece::{Color, Height, Hole, Piece, PieceFeature, Shape};
+use crate::r#move::Move;
 
 pub const WIDTH_BOARD: usize = 4;
 pub const HEIGHT_BOARD: usize = 4;
@@ -205,12 +206,18 @@ impl Board {
         &self.cells
     }
 
+    // pub fn get_cells_from_position(&self, x: usize, y: usize) -> Cell {
+    //     *self.cells.get(&Board::get_index(x, y).unwrap()).unwrap()
+    // }
+    
     pub fn get_cells_from_position(&self, x: usize, y: usize) -> Cell {
         *self.cells.get(&Board::get_index(x, y).unwrap()).unwrap()
     }
 
+    /// Return the empty cells available in the board
     pub fn get_empty_cells(&self) -> BTreeMap<usize, Cell> {
-        self.cells
+        self.get_cells()
+            .clone()
             .into_iter()
             .filter(|f| f.1.piece.is_none())
             .collect()
@@ -306,12 +313,12 @@ impl Board {
     }
 
     /// Return the list of the immediate available move from the current board
-    pub fn get_available_moves(&self) -> Vec<(usize, usize)> {
-        let mut available_next_move: Vec<(usize, usize)> = vec![];
+    pub fn get_available_moves(&self) -> Vec<Move> {
+        let mut available_next_move: Vec<Move> = vec![];
 
-        for (index_piece, _) in &self.available_pieces {
-            for (index_cell, _) in &self.cells {
-                available_next_move.push((*index_piece, *index_cell));
+        for (index_piece, _) in &self.get_available_pieces() {
+            for (index_cell, _) in &self.get_empty_cells() {
+                available_next_move.push(Move::new(*index_piece, *index_cell).unwrap());
             }
         }
 

@@ -1,3 +1,4 @@
+use core::cmp::Ordering;
 use crate::board::Board;
 use crate::board::Cell;
 use crate::board::HEIGHT_BOARD;
@@ -10,7 +11,7 @@ use crate::piece::Shape;
 
 pub const WIN_SCORE: usize = 1000;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Eq, PartialEq)]
 pub enum Score {
     Point(usize),
     Win,
@@ -148,6 +149,41 @@ impl Score {
     }
 }
 
+impl PartialOrd for Score {
+
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> { 
+        Some(self.cmp(other))
+     }
+}
+
+// Implement comparison trait to allow score compare
+impl Ord for Score {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        match self {
+            Score::Point(self_val) => {
+                match other {
+                    Score::Point(other_val) => {
+                        return self_val.cmp(other_val);
+                    },
+                    Score::Win => {
+                        return Ordering::Less;
+                    }
+                }
+            },
+            Score::Win => {
+                match other {
+                    Score::Point(_) => {
+                        return Ordering::Greater;
+                    },
+                    Score::Win => {
+                        return Ordering::Equal;
+                    }
+                }
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::{board::Board, piece::Piece};
@@ -251,5 +287,16 @@ mod tests {
             (Piece::from("DEXS"), Score::Point(12), Board::get_index(1, 3).unwrap()),
             (Piece::from("DFTS"), Score::Win, Board::get_index(1, 0).unwrap()),
         ]);
+    }
+
+    #[test]
+    fn test_score_compare() {
+        assert!(Score::Point(10) < Score::Point(20));
+        assert!(Score::Point(1) > Score::Point(0));
+        assert!(Score::Point(0) >= Score::Point(0));
+        assert!(Score::Point(50) == Score::Point(50));
+
+        assert!(Score::Point(50) < Score::Win);
+        assert!(Score::Win == Score::Win);
     }
 }

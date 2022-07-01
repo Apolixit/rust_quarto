@@ -7,6 +7,7 @@ pub mod board;
 pub mod piece;
 pub mod error;
 pub mod ai;
+pub mod r#move;
 
 cfg_if! {
     if #[cfg(feature = "console_log")] {

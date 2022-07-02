@@ -11,7 +11,7 @@ use crate::piece::Shape;
 
 pub const WIN_SCORE: usize = 1000;
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Clone, Copy)]
 pub enum Score {
     Point(usize),
     Win,
@@ -115,7 +115,7 @@ impl Score {
                 .filter(|f| f.shape == Shape::Square)
                 .count(),
         ];
-        println!("Points = {:?}", points);
+        trace!("Points = {:?}", points);
         Score::calc_point(points)
     }
 
@@ -140,7 +140,7 @@ impl Score {
             .sum::<usize>()
     }
 
-    
+
     fn has_win(score: &Vec<usize>) -> bool {
         if score.last().unwrap() >= &WIN_SCORE {
             return true;
@@ -151,7 +151,7 @@ impl Score {
 
 impl PartialOrd for Score {
 
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> { 
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
      }
 }

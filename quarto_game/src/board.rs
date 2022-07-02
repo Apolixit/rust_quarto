@@ -158,8 +158,9 @@ impl Board {
             self.cells.get(&cell_index).unwrap()
         );
 
-        if let Some(_) = self.cells.get(&cell_index).unwrap().piece {
-            return Err(ErrorGame::CellIsNotEmpty);
+        let cell = self.cells.get(&cell_index).unwrap();
+        if let Some(piece) = cell.piece {
+            return Err(ErrorGame::CellIsNotEmpty(*cell, piece));
         }
 
         self.cells
@@ -209,7 +210,7 @@ impl Board {
     // pub fn get_cells_from_position(&self, x: usize, y: usize) -> Cell {
     //     *self.cells.get(&Board::get_index(x, y).unwrap()).unwrap()
     // }
-    
+
     pub fn get_cells_from_position(&self, x: usize, y: usize) -> Cell {
         *self.cells.get(&Board::get_index(x, y).unwrap()).unwrap()
     }
@@ -321,6 +322,19 @@ impl Board {
                 available_next_move.push(Move::new(*index_piece, *index_cell).unwrap());
             }
         }
+
+        available_next_move
+    }
+
+    /// Return the list of the immediate available move from the current board
+    pub fn get_available_moves_from_piece(&self, piece: &Piece) -> Vec<Move> {
+        let mut available_next_move: Vec<Move> = vec![];
+
+        // for (index_piece, _) in &self.get_piece_index(piece).unwrap() {
+            for (index_cell, _) in &self.get_empty_cells() {
+                available_next_move.push(Move::new(self.get_piece_index(piece).unwrap(), *index_cell).unwrap());
+            }
+        // }
 
         available_next_move
     }

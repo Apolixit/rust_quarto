@@ -1,5 +1,7 @@
 use std::fmt::Display;
 
+use crate::{board::Cell, piece::Piece};
+
 /// Represent the different errors which could happen during the game
 #[derive(Debug, PartialEq)]
 pub enum ErrorGame {
@@ -13,16 +15,16 @@ pub enum ErrorGame {
     PieceDoesNotBelongPlayable,
 
     /// A piece has already been played on this cell
-    CellIsNotEmpty,
+    CellIsNotEmpty(Cell, Piece),
 }
 
 impl ErrorGame {
-    pub fn message(&self) -> &str {
+    pub fn message(&self) -> String {
         match self {
-            Self::IndexOutOfBound => "The index is out of bound",
-            Self::PieceDoesNotExists => "This piece does not exists",
-            Self::PieceDoesNotBelongPlayable => "This piece has already been played",
-            Self::CellIsNotEmpty => "The cell is not empty",
+            Self::IndexOutOfBound => "The index is out of bound".to_owned(),
+            Self::PieceDoesNotExists => "This piece does not exists".to_owned(),
+            Self::PieceDoesNotBelongPlayable => "This piece has already been played".to_owned(),
+            Self::CellIsNotEmpty(cell, piece) => format!("The cell {} is not empty and have already the piece {}", cell, piece),
         }
     }
 }

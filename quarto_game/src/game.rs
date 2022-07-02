@@ -233,10 +233,15 @@ mod tests {
     {
         let mut game = Game::new("p1", "p2");
 
+        let cell_error = game.get_board().get_cells_from_position(0, 0);
+        let piece_error = game.get_board().get_piece_from_available(0).unwrap().clone();
+
         game.play_index(0, 0)?;
+        let play_result = game.play_index(1, 0);
+
         assert_eq!(
-            game.play_index(1, 0),
-            Err(ErrorGame::CellIsNotEmpty)
+            play_result,
+            Err(ErrorGame::CellIsNotEmpty(cell_error, piece_error))
         );
 
         Ok(())

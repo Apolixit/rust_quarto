@@ -149,6 +149,12 @@ impl Score {
     }
 }
 
+impl Default for Score {
+    fn default() -> Self {
+        Score::Point(0)
+    }
+}
+
 impl PartialOrd for Score {
 
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
@@ -264,6 +270,20 @@ mod tests {
             (Piece::from("DFXS"), Score::Point(13), 6),
             (Piece::from("DETC"), Score::Point(17), 10),
         ]);
+    }
+
+    #[test]
+    pub fn test_calc_basic_score_2() {
+        test_scenario(vec![
+            (Piece::from("WETS"), Score::Point(0), 0),
+            (Piece::from("DFTS"), Score::Point(2), 2),
+            (Piece::from("WFTS"), Score::Point(5), 4),
+            (Piece::from("DFXS"), Score::Point(10), 6),
+            (Piece::from("DETC"), Score::Point(11), 9),
+            (Piece::from("WFXS"), Score::Point(13), 15),
+            (Piece::from("DEXS"), Score::Point(18), 14),
+        ]);
+        // (piece num 10 / cell num 15)
     }
 
     #[test]

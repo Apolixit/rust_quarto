@@ -16,6 +16,9 @@ pub enum ErrorGame {
 
     /// A piece has already been played on this cell
     CellIsNotEmpty(Cell, Piece),
+
+    /// No best move has been found by the ai
+    NoBestMove
 }
 
 impl ErrorGame {
@@ -25,6 +28,7 @@ impl ErrorGame {
             Self::PieceDoesNotExists => "This piece does not exists".to_owned(),
             Self::PieceDoesNotBelongPlayable => "This piece has already been played".to_owned(),
             Self::CellIsNotEmpty(cell, piece) => format!("The cell {} is not empty and have already the piece {}", cell, piece),
+            Self::NoBestMove => "No best move has been found by the ai".to_owned(),
         }
     }
 }

@@ -87,7 +87,7 @@ impl AI {
     /// Func to decide which piece to give to his opponent
     pub fn choose_piece_for_opponent(&self, board: &Board) -> Piece {
         info!("Searching piece with depth = {}", 1);
-        ai::calc_piece(board, 1, true).to_owned()
+        ai::calc_piece(board, 2, true).to_owned()
     }
 }
 

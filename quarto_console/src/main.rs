@@ -95,7 +95,7 @@ fn main() {
                             .choose_move(piece_to_play, game.get_board())
                             .unwrap();
                         println!("I play this on cell num {}", move_selected.index_cell() + 1);
-                        move_selected.index_cell() + 1
+                        move_selected.index_cell()
                     }
                 };
 

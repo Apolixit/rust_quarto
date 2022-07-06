@@ -1,7 +1,7 @@
 use ansi_term::{Colour, Style};
 use quarto_game::{
-    board::{BoardState},
-    game::Game,
+    board::BoardState,
+    game::{Game, PlayerType},
 };
 use std::io;
 
@@ -18,9 +18,10 @@ fn main() {
 
     loop {
         let p1_name = read_input_string("Player 1 name :");
-        let p2_name = read_input_string("Player 2 name :");
+        // let p2_name = read_input_string("Player 2 name :");
 
-        let mut game = Game::new(p1_name.as_str(), p2_name.as_str());
+        // let mut game = Game::new(p1_name.as_str(), p2_name.as_str());
+        let mut game = Game::pve(p1_name.as_str());
         print!(
             "Ok {} and {}, let's start !",
             game.get_player(0),
@@ -31,14 +32,33 @@ fn main() {
             println!("{}", game.get_board());
 
             loop {
-                let piece_key = read_input_index(
-                    format!(
-                        "{} choose a piece for {}\nEnter the piece number : ",
-                        game.opponent_player(),
-                        game.current_player()
-                    )
-                    .as_str(),
-                );
+                let piece_key: usize = match game.current_player().player_type() {
+                    PlayerType::AI => read_input_index(
+                        format!(
+                            "{} choose a piece for {}\nEnter the piece number : ",
+                            game.opponent_player(),
+                            game.current_player()
+                        )
+                        .as_str(),
+                    ),
+                    PlayerType::HUMAN => {
+                        println!("Searching a piece...");
+                        let piece = game
+                            .opponent_player()
+                            .choose_piece_for_opponent(game.get_board());
+                        println!("I choose {} for you", &piece);
+
+                        game.get_board().get_piece_index(&piece).unwrap()
+                    }
+                };
+                // let piece_key = read_input_index(
+                //     format!(
+                //         "{} choose a piece for {}\nEnter the piece number : ",
+                //         game.opponent_player(),
+                //         game.current_player()
+                //     )
+                //     .as_str(),
+                // );
 
                 // Check if the piece is always available
                 if let Err(e) = game.get_board().get_piece_from_available(piece_key) {
@@ -46,16 +66,38 @@ fn main() {
                     continue;
                 }
 
-                let cell_key = read_input_index(
-                    format!(
-                        "{} on which case do you wanna play the piece {} ?",
-                        game.current_player(),
-                        game.get_board()
-                            .get_piece_from_available(piece_key)
-                            .unwrap()
-                    )
-                    .as_str(),
-                );
+                let piece_to_play = game
+                    .get_board()
+                    .get_piece_from_available(piece_key)
+                    .unwrap();
+
+                // let cell_key = read_input_index(
+                //     format!(
+                //         "{} on which case do you wanna play the piece {} ?",
+                //         game.current_player(),
+                //         piece_to_play
+                //     )
+                //     .as_str(),
+                // );
+
+                let cell_key: usize = match game.current_player().player_type() {
+                    PlayerType::HUMAN => read_input_index(
+                        format!(
+                            "{} on which case do you wanna play the piece {} ?",
+                            game.current_player(),
+                            piece_to_play
+                        )
+                        .as_str(),
+                    ),
+                    PlayerType::AI => {
+                        let move_selected = game
+                            .current_player()
+                            .choose_move(piece_to_play, game.get_board())
+                            .unwrap();
+                        println!("I play this on cell num {}", move_selected.index_cell() + 1);
+                        move_selected.index_cell() + 1
+                    }
+                };
 
                 if let Err(e) = game.play_index(piece_key, cell_key) {
                     println!("{}", e);
@@ -74,18 +116,21 @@ fn main() {
                     //We display the board for the last time to show the winning combinaison
                     println!("{}", game.get_board());
 
-                    let win_position: Vec<usize> = winning_cells.into_iter().map(|(position, _)| position + 1).collect();
+                    let win_position: Vec<usize> = winning_cells
+                        .into_iter()
+                        .map(|(position, _)| position + 1)
+                        .collect();
                     println!(
                         "{} win the game with combinaison : {:?}",
                         Style::new()
                             .bold()
                             .underline()
                             .paint(game.current_player().to_string()),
-                            win_position
+                        win_position
                     );
 
                     break 'game;
-                },
+                }
                 BoardState::Draw => {
                     println!("Draw ! No winner for this game, well played.")
                 }

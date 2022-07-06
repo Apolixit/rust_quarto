@@ -100,7 +100,7 @@ fn calc_next_moves_score(
 /// - the depth of the the search moves
 /// - Do we currently maximize the score ?
 /// - The piece to be played (it's specific to Quarto)
-fn calc_move(
+pub fn calc_move(
     board: &Board,
     depth: usize,
     maximise: bool,
@@ -138,7 +138,7 @@ fn calc_move(
     // Move::new(0, 0).unwrap()
 }
 
-fn calc_piece(board: &Board, depth: usize, maximise: bool) -> &Piece {
+pub fn calc_piece(board: &Board, depth: usize, maximise: bool) -> &Piece {
     // let mut move_score: Vec<(Move, Score)> = vec![];
     let moves_score_result = calc_next_moves_score(board, depth, maximise, None);
     // for current_move in board.get_available_moves() {
@@ -205,7 +205,8 @@ mod tests {
     #[test]
     fn test_best_play_should_win_in_one_depth() {
         // The first winning move the algorithm has to find in the next turn (depth = 1)
-        let winning_move = Move::new(2, 3).unwrap();
+        // let winning_move = Move::new(2, 3).unwrap();
+        let winning_move = Move::new(12, 14).unwrap();
 
         let moves = vec![
             (Piece::from("WETS"), 0),
@@ -226,6 +227,18 @@ mod tests {
 
         let best_first_move = calc_move(&board, 1, true, None).unwrap();
         assert_eq!(best_first_move, winning_move);
+    }
+
+    #[test]
+    fn test_choose_piece_when_start() {
+        let depth: usize = 1;
+
+        info!("Start a new game");
+        let board = Board::create();
+        info!("Start calc_piece with depth = {}", depth);
+        let piece_choose = calc_piece(&board, depth, true);
+
+        info!("The piece {} has been choose", piece_choose);
     }
 
     #[test]

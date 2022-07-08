@@ -17,6 +17,11 @@ use crate::r#move::Move;
 pub const WIDTH_BOARD: usize = 4;
 pub const HEIGHT_BOARD: usize = 4;
 
+pub trait BoardIndex {
+    fn from_index(board: &Board, index: usize) -> Result<&Self, ErrorGame>;
+    fn to_index(&self, board: &Board) -> Result<usize, ErrorGame>;
+}
+
 #[derive(Debug, Clone, Eq, PartialEq)]
 /// Represent the state of the game
 pub enum BoardState {
@@ -66,17 +71,7 @@ impl Board {
         let mut key: usize = 0;
 
         for i in 0..WIDTH_BOARD * HEIGHT_BOARD {
-            cells.insert(
-                key,
-                Cell {
-                    piece: None,
-                    background_color: if i % 2 == 0 {
-                        CellColor::Black
-                    } else {
-                        CellColor::White
-                    },
-                },
-            );
+            cells.insert(key, Cell::new(i).unwrap());
 
             key += 1;
         }
@@ -331,9 +326,10 @@ impl Board {
         let mut available_next_move: Vec<Move> = vec![];
 
         // for (index_piece, _) in &self.get_piece_index(piece).unwrap() {
-            for (index_cell, _) in &self.get_empty_cells() {
-                available_next_move.push(Move::new(self.get_piece_index(piece).unwrap(), *index_cell).unwrap());
-            }
+        for (index_cell, _) in &self.get_empty_cells() {
+            available_next_move
+                .push(Move::new(self.get_piece_index(piece).unwrap(), *index_cell).unwrap());
+        }
         // }
 
         available_next_move
@@ -440,8 +436,38 @@ impl Display for Board {
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Cell {
     /// Determine if a piece is present on the cell or not
-    pub piece: Option<Piece>,
-    pub background_color: CellColor,
+    piece: Option<Piece>,
+    x: usize,
+    y: usize,
+}
+
+impl Cell {
+    pub fn new(index: usize) -> Result<Cell, ErrorGame> {
+        let (x, y) = Cell::to_coordinate(index).ok_or(ErrorGame::IndexOutOfBound)?;
+        Ok(Cell { piece: None, x, y })
+    }
+
+    pub fn piece(&self) -> Option<Piece> {
+        self.piece
+    }
+
+    pub fn to_coordinate(index: usize) -> Option<(usize, usize)> {
+        if index >= WIDTH_BOARD * HEIGHT_BOARD {
+            return None;
+        }
+        Some((index % WIDTH_BOARD, index / HEIGHT_BOARD))
+    }
+
+    fn from_index(board: &Board, index: usize) -> Result<&Self, ErrorGame> {
+        Ok(board
+            .get_cells()
+            .get(&index)
+            .ok_or(ErrorGame::PieceDoesNotBelongPlayable)?)
+    }
+
+    fn to_index(&self) -> Result<usize, ErrorGame> {
+        Ok(&self.x * WIDTH_BOARD + &self.y)
+    }
 }
 
 /// Draw a cell
@@ -458,12 +484,7 @@ impl Display for Cell {
         )
     }
 }
-#[derive(Debug, Clone, Copy, Eq, PartialEq)]
-pub enum CellColor {
-    Black,
-    White,
-    Green,
-}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -481,6 +502,10 @@ mod tests {
         assert_eq!(Board::get_index(0, 3).unwrap(), 12);
 
         assert_eq!(Board::get_index(4, 4), None);
+
+        assert_eq!(Cell::new(0).unwrap().to_index().unwrap(), 0);
+        assert_eq!(Cell::new(10).unwrap().to_index().unwrap(), 10);
+        assert_eq!(Cell::new(15).unwrap().to_index().unwrap(), 15);
     }
 
     #[test]

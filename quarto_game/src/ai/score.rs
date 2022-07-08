@@ -61,8 +61,8 @@ impl Score {
         // We only get pieces which has been already played
         let mut pieces: Vec<Piece> = cells
             .into_iter()
-            .filter(|c| c.piece.is_some())
-            .map(|c| c.piece.unwrap())
+            .filter(|c| c.piece().is_some())
+            .map(|c| c.piece().unwrap())
             .collect();
 
         // No piece has been played -> score = 0

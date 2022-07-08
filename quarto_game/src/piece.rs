@@ -1,3 +1,6 @@
+use crate::board::BoardIndex;
+use crate::error::ErrorGame;
+use crate::board::Board;
 use ansi_term::Colour as ConsoleColor;
 use enum_iterator::IntoEnumIterator;
 use std::fmt::Display;
@@ -232,17 +235,6 @@ impl Piece {
             shape,
         }
     }
-
-    // fn common_carac<P>(pieces: &Vec<Piece>, p: P) -> usize 
-    //     where P: FnMut(&Piece) -> bool
-    // {
-    //     pieces.into_iter().filter(p);
-    // }
-
-    // pub fn check_pieces_common_carac<T>(pieces: &Vec<Piece>) -> (Option<Carac>, usize)
-    // {
-    //     pieces.into_iter().filter(|f| f.color == Color::Dark)
-    // }
     
     /// Check if the piece vector is a winning combinaison
     pub fn check_piece_is_winning(pieces: &mut Vec<Piece>) -> bool {
@@ -262,6 +254,16 @@ impl Piece {
         // print!("Vec<Piece> : {:?}", winning_condition);
 
         winning_condition.iter().any(|w| *w)
+    }
+}
+
+impl BoardIndex for Piece {
+    fn from_index(board: &Board, index: usize) -> Result<&Self, ErrorGame> {
+        board.get_piece_from_available(index)
+    }
+
+    fn to_index(&self, board: &Board) -> Result<usize, ErrorGame> {
+        board.get_piece_index(&self)
     }
 }
 
@@ -308,6 +310,8 @@ impl From<[char; 4]> for Piece {
 }
 #[cfg(test)]
 mod tests {
+    use crate::{error, board::Cell};
+
     use super::*;
 
     #[test]
@@ -416,5 +420,30 @@ mod tests {
     fn from_error_chars() {
         let x = Piece::from(['D', 'E', 'S', 'Z']);
         println!("{}", x);
+    }
+
+    #[test]
+    fn test_piece_position() {
+        //from index
+        //to index
+        let mut board = Board::create();
+        error!("{}", board);
+
+        let first_piece = Piece::from_index(&board, 0).unwrap();
+        let second_piece = Piece::from_index(&board, 1).unwrap();
+        let last_piece = Piece::from_index(&board, 15).unwrap();
+        
+        // We play the first piece
+        board.play_piece(first_piece.to_index(&board).unwrap(), 0).unwrap(); //Cell::from_index(&board, 0)
+        board.remove_piece(0).unwrap();
+        
+        // The second piece become the first piece
+        // assert_eq!(&Piece::from_index(&board.clone(), 0).unwrap(), &second_piece);
+        // // The first cell is not empty
+        // assert!(board[0].piece().is_some());
+
+        // // The index 15 throw an error
+        // assert_eq!(last_piece.to_index(&board).unwrap(), 14);
+        // assert_eq!(Piece::from_index(&board, 15), Err(ErrorGame::PieceDoesNotBelongPlayable));
     }
 }

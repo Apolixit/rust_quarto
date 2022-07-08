@@ -74,8 +74,12 @@ pub struct AI {
 impl AI {
     pub fn new() -> AI {
         AI {
-            name: "AI".to_string(),
+            name: AI::default_name(),
         }
+    }
+
+    pub fn default_name() -> String {
+        String::from("AI")
     }
 
     /// Func to decide which move to play
@@ -212,12 +216,12 @@ mod tests {
 
         let new_game = Game::pve("I'm human bro");
         assert_eq!(new_game.get_player(0).name(), "I'm human bro".to_string());
-        assert_eq!(new_game.get_player(1).name(), "AI".to_string());
+        assert_eq!(new_game.get_player(1).name(), AI::default_name());
 
-        assert_eq!(new_game.current_player().name(), "AI".to_string());
+        assert_eq!(new_game.current_player().name(), "I'm human bro".to_string());
         assert_eq!(
             new_game.opponent_player().name(),
-            "I'm human bro".to_string()
+            AI::default_name()
         );
     }
 
@@ -240,7 +244,7 @@ mod tests {
             nb_initial_piece - 1
         );
 
-        match game.board[0].piece {
+        match game.board[0].piece() {
             Some(p) => {
                 assert_eq!(&p, selected_piece)
             }
@@ -264,7 +268,7 @@ mod tests {
             game.board.get_available_pieces().len(),
             nb_initial_piece - 1
         );
-        match game.board[0].piece {
+        match game.board[0].piece() {
             Some(p) => {
                 assert_eq!(&p, selected_piece)
             }
@@ -284,21 +288,21 @@ mod tests {
 
         let piece_10 = game.play_index(10, 12)?;
 
-        match game.board[0].piece {
+        match game.board[0].piece() {
             Some(p) => {
                 assert_eq!(p, piece_0)
             }
             None => panic!("No piece found"),
         }
 
-        match game.board[5].piece {
+        match game.board[5].piece() {
             Some(p) => {
                 assert_eq!(p, piece_1)
             }
             None => panic!("No piece found"),
         }
 
-        match game.board[12].piece {
+        match game.board[12].piece() {
             Some(p) => {
                 assert_eq!(p, piece_10)
             }

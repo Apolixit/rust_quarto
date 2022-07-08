@@ -1,6 +1,7 @@
-use crate::board::BoardIndex;
-use crate::error::ErrorGame;
 use crate::board::Board;
+use crate::board::BoardIndex;
+use crate::board::Positionnable;
+use crate::error::ErrorGame;
 use ansi_term::Colour as ConsoleColor;
 use enum_iterator::IntoEnumIterator;
 use std::fmt::Display;
@@ -26,7 +27,7 @@ pub enum Carac {
     Color,
     Shape,
     Hole,
-    Height
+    Height,
 }
 
 /// The color type of a piece
@@ -235,11 +236,12 @@ impl Piece {
             shape,
         }
     }
-    
     /// Check if the piece vector is a winning combinaison
     pub fn check_piece_is_winning(pieces: &mut Vec<Piece>) -> bool {
         //We need at least a 4 size vector
-        if pieces.len() < 4 { return false; }
+        if pieces.len() < 4 {
+            return false;
+        }
 
         let winning_condition = vec![
             pieces.into_iter().all(|p| p.color == Color::Dark),
@@ -259,11 +261,18 @@ impl Piece {
 
 impl BoardIndex for Piece {
     fn from_index(board: &Board, index: usize) -> Result<&Self, ErrorGame> {
-        board.get_piece_from_available(index)
+        board
+            .get_available_pieces()
+            .get(&index)
+            .ok_or(ErrorGame::PieceDoesNotBelongPlayable)
     }
 
     fn to_index(&self, board: &Board) -> Result<usize, ErrorGame> {
-        board.get_piece_index(&self)
+        board
+            .get_available_pieces()
+            .into_iter()
+            .find_map(|(i, p)| if &p == self { Some(i) } else { None })
+            .ok_or(ErrorGame::PieceDoesNotBelongPlayable)
     }
 }
 
@@ -310,7 +319,7 @@ impl From<[char; 4]> for Piece {
 }
 #[cfg(test)]
 mod tests {
-    use crate::{error, board::Cell};
+    use crate::{board::Cell, error};
 
     use super::*;
 
@@ -394,25 +403,25 @@ mod tests {
         let mut v_3 = vec![
             Piece::new(Color::White, Hole::Empty, Height::Small, Shape::Circle),
             Piece::new(Color::White, Hole::Empty, Height::Small, Shape::Circle),
-            Piece::new(Color::White, Hole::Empty, Height::Small, Shape::Circle)
+            Piece::new(Color::White, Hole::Empty, Height::Small, Shape::Circle),
         ];
-        assert_eq!(Piece::check_piece_is_winning(&mut v_3),  false);
+        assert_eq!(Piece::check_piece_is_winning(&mut v_3), false);
 
         let mut v_4_1 = vec![
             Piece::new(Color::White, Hole::Empty, Height::Small, Shape::Circle),
             Piece::new(Color::Dark, Hole::Full, Height::Tall, Shape::Circle),
             Piece::new(Color::White, Hole::Empty, Height::Small, Shape::Circle),
-            Piece::new(Color::White, Hole::Empty, Height::Small, Shape::Square)
+            Piece::new(Color::White, Hole::Empty, Height::Small, Shape::Square),
         ];
-        assert_eq!(Piece::check_piece_is_winning(&mut v_4_1),  false);
+        assert_eq!(Piece::check_piece_is_winning(&mut v_4_1), false);
 
         let mut v_4_2 = vec![
             Piece::new(Color::White, Hole::Empty, Height::Small, Shape::Circle),
             Piece::new(Color::White, Hole::Full, Height::Tall, Shape::Circle),
             Piece::new(Color::White, Hole::Empty, Height::Small, Shape::Circle),
-            Piece::new(Color::White, Hole::Empty, Height::Small, Shape::Square)
+            Piece::new(Color::White, Hole::Empty, Height::Small, Shape::Square),
         ];
-        assert_eq!(Piece::check_piece_is_winning(&mut v_4_2),  true);
+        assert_eq!(Piece::check_piece_is_winning(&mut v_4_2), true);
     }
 
     #[test]
@@ -424,26 +433,25 @@ mod tests {
 
     #[test]
     fn test_piece_position() {
-        //from index
-        //to index
         let mut board = Board::create();
         error!("{}", board);
 
         let first_piece = Piece::from_index(&board, 0).unwrap();
         let second_piece = Piece::from_index(&board, 1).unwrap();
         let last_piece = Piece::from_index(&board, 15).unwrap();
-        
         // We play the first piece
-        board.play_piece(first_piece.to_index(&board).unwrap(), 0).unwrap(); //Cell::from_index(&board, 0)
-        board.remove_piece(0).unwrap();
-        
-        // The second piece become the first piece
-        // assert_eq!(&Piece::from_index(&board.clone(), 0).unwrap(), &second_piece);
-        // // The first cell is not empty
-        // assert!(board[0].piece().is_some());
+        board
+            .play(first_piece, Cell::from_index(&board, 0).unwrap())
+            .unwrap();
+        board.remove(first_piece).unwrap();
 
-        // // The index 15 throw an error
-        // assert_eq!(last_piece.to_index(&board).unwrap(), 14);
-        // assert_eq!(Piece::from_index(&board, 15), Err(ErrorGame::PieceDoesNotBelongPlayable));
+        // The second piece become the first piece
+        assert_eq!(Piece::from_index(&board, 0).unwrap(), second_piece);
+        // The first cell is not empty
+        assert!(board[0].piece().is_some());
+
+        // The index 15 throw an error
+        assert_eq!(last_piece.to_index(&board).unwrap(), 14);
+        assert_eq!(Piece::from_index(&board, 15), Err(ErrorGame::PieceDoesNotBelongPlayable));
     }
 }

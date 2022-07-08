@@ -1,3 +1,4 @@
+use crate::board::BoardIndex;
 use core::fmt::Debug;
 use std::fmt::Display;
 
@@ -8,29 +9,32 @@ use crate::piece::Piece;
 
 /// Represent a move on the board
 #[derive(Clone, PartialEq)]
-pub struct Move {
-    index_piece: usize,
-    index_cell: usize,
+pub struct Move<'a> {
+    piece: &'a Piece,
+    cell: &'a Cell,
 }
 
-impl Move {
-    pub fn new(index_piece: usize, index_cell: usize) -> Result<Move, ErrorGame> {
-        Ok(Move {
-            index_piece,
-            index_cell,
-        })
+impl<'a> Move<'a> {
+    pub fn new(piece: &'a Piece, cell: &'a Cell) -> Move<'a> {
+        Move { 
+            piece: piece, 
+            cell: cell 
+        }
+    }
+    pub fn from_index(index_piece: usize, index_cell: usize, board: &Board) -> Result<Move, ErrorGame> {
+        Ok(Move::new(Piece::from_index(&board, index_piece).unwrap(), Cell::from_index(&board, index_cell).unwrap()))
     }
 
-    pub fn get_index_piece(&self) -> usize {
-        self.index_piece
-    }
+    // pub fn get_index_piece(&self) -> usize {
+    //     self.index_piece
+    // }
 
-    pub fn index_cell(&self) -> usize {
-        self.index_cell
-    }
+    // pub fn index_cell(&self) -> usize {
+    //     self.index_cell
+    // }
 
-    pub fn to_tuple(&self) -> (usize, usize) {
-        (self.index_piece, self.index_cell)
+    pub fn to_tuple(&self, board: &Board) -> (usize, usize) {
+        (self.piece.to_index(&board).unwrap(), self.cell().to_index().unwrap())
     }
 
     // pub fn get_piece(&self, board: Board) -> Result<&Piece, ErrorGame> {
@@ -45,15 +49,23 @@ impl Move {
 
     //     Ok(x)
     // }
+
+    pub fn piece(&self) -> &Piece {
+        self.piece
+    }
+
+    pub fn cell(&self) -> &Cell {
+        self.cell
+    }
 }
 
-impl Display for Move {
+impl Display for Move<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "(piece num {} / cell num {})", (self.index_piece + 1), (self.index_cell + 1))
     }
 }
 
-impl Debug for Move {
+impl Debug for Move<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "({},{})", self.index_piece, self.index_cell)
     }

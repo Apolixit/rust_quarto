@@ -101,9 +101,12 @@ impl Board {
         let mut diagonal_cells_top_left_bottom_right: Vec<Cell> = vec![];
         let mut diagonal_cells_top_right_bottom_left: Vec<Cell> = vec![];
         for i in 0..WIDTH_BOARD {
-            diagonal_cells_top_left_bottom_right.push(board.get_cells_from_position(i, i));
-            diagonal_cells_top_right_bottom_left
-                .push(board.get_cells_from_position(WIDTH_BOARD - i - 1, i));
+            diagonal_cells_top_left_bottom_right.push(Cell::from_position(board, i, i));
+            diagonal_cells_top_right_bottom_left.push(Cell::from_position(
+                board,
+                WIDTH_BOARD - i - 1,
+                i,
+            ));
         }
 
         (
@@ -130,48 +133,44 @@ impl Board {
 
     /// Play a piece on the board
     /// Piece and cell are identify by their index in the HashMap
-    pub fn play_piece(
-        &mut self,
-        piece_index: usize,
-        cell_index: usize,
-    ) -> Result<Piece, ErrorGame> {
+    pub fn play(&mut self, piece: &Piece, cell: &Cell) -> Result<Piece, ErrorGame> {
         if !self.can_play_another_turn() {
             return Err(ErrorGame::PieceDoesNotBelongPlayable);
         }
-        if !self.cells.contains_key(&cell_index) {
-            error!("Try to play in cell num {} - out of bound", cell_index);
-            return Err(ErrorGame::IndexOutOfBound);
-        }
+        // if !self.cells.contains_key(&cell_index) {
+        //     error!("Try to play in cell num {} - out of bound", cell_index);
+        //     return Err(ErrorGame::IndexOutOfBound);
+        // }
 
-        let piece = self
-            .available_pieces
-            .get(&piece_index)
-            .ok_or(ErrorGame::PieceDoesNotBelongPlayable)?;
+        // let piece = self
+        //     .available_pieces
+        //     .get(&piece_index)
+        //     .ok_or(ErrorGame::PieceDoesNotBelongPlayable)?;
 
-        trace!(
-            "Cell before playing : {}",
-            self.cells.get(&cell_index).unwrap()
-        );
+        trace!("Cell before playing : {}", cell);
 
-        let cell = self.cells.get(&cell_index).unwrap();
+        // let cell = self.cells.get(&cell_index).unwrap();
         if let Some(piece) = cell.piece {
             return Err(ErrorGame::CellIsNotEmpty(*cell, piece));
         }
 
+        let cell_index = cell.to_index()?;
         self.cells
             .entry(cell_index)
             .and_modify(|f| f.piece = Some(*piece));
 
         trace!(
             "Cell after playing : {}",
-            self.cells.get(&cell_index).unwrap()
+            Cell::from_index(&self, cell_index).unwrap()
         );
 
         Ok(*piece)
     }
 
     /// Remove the piece from available playable list
-    pub fn remove_piece(&mut self, index: usize) -> Result<Piece, ErrorGame> {
+    pub fn remove(&mut self, piece: &Piece) -> Result<Piece, ErrorGame> {
+        let index = piece.to_index(&self).unwrap();
+
         trace!("Piece num {} remove from availables", index);
         self.available_pieces
             .remove(&index)
@@ -184,19 +183,19 @@ impl Board {
     }
 
     /// Get the piece from the available stack
-    pub fn get_piece_from_available(&self, index: usize) -> Result<&Piece, ErrorGame> {
-        self.available_pieces
-            .get(&index)
-            .ok_or(ErrorGame::PieceDoesNotBelongPlayable)
-    }
+    // pub fn get_piece_from_available(&self, index: usize) -> Result<&Piece, ErrorGame> {
+    //     self.available_pieces
+    //         .get(&index)
+    //         .ok_or(ErrorGame::PieceDoesNotBelongPlayable)
+    // }
 
     /// Get the piece index
-    pub fn get_piece_index(&self, piece: &Piece) -> Result<usize, ErrorGame> {
-        self.get_available_pieces()
-            .into_iter()
-            .find_map(|(i, p)| if &p == piece { Some(i) } else { None })
-            .ok_or(ErrorGame::PieceDoesNotBelongPlayable)
-    }
+    // pub fn get_piece_index(&self, piece: &Piece) -> Result<usize, ErrorGame> {
+    //     self.get_available_pieces()
+    //         .into_iter()
+    //         .find_map(|(i, p)| if &p == piece { Some(i) } else { None })
+    //         .ok_or(ErrorGame::PieceDoesNotBelongPlayable)
+    // }
 
     pub fn get_cells(&self) -> &BTreeMap<usize, Cell> {
         &self.cells
@@ -206,9 +205,9 @@ impl Board {
     //     *self.cells.get(&Board::get_index(x, y).unwrap()).unwrap()
     // }
 
-    pub fn get_cells_from_position(&self, x: usize, y: usize) -> Cell {
-        *self.cells.get(&Board::get_index(x, y).unwrap()).unwrap()
-    }
+    // pub fn get_cells_from_position(&self, x: usize, y: usize) -> Cell {
+    //     *self.cells.get(&Board::get_index(x, y).unwrap()).unwrap()
+    // }
 
     /// Return the empty cells available in the board
     pub fn get_empty_cells(&self) -> BTreeMap<usize, Cell> {
@@ -234,7 +233,7 @@ impl Board {
             let mut vertical_cells: Vec<Cell> = Vec::with_capacity(HEIGHT_BOARD);
             'y_x: for j in 0..HEIGHT_BOARD {
                 //If the cell is empty -> break this loop iteration
-                let current_cell = self.get_cells_from_position(j, i);
+                let current_cell = Cell::from_position(&self, j, i);
                 if let None = current_cell.piece {
                     break 'y_x;
                 }
@@ -251,7 +250,7 @@ impl Board {
             let mut vertical_cells: Vec<Cell> = Vec::with_capacity(HEIGHT_BOARD);
             'y_y: for j in 0..HEIGHT_BOARD {
                 //If the cell is empty -> break this loop iteration
-                let current_cell = self.get_cells_from_position(i, j);
+                let current_cell = Cell::from_position(&self, i, j);
                 if let None = current_cell.piece {
                     break 'y_y;
                 }
@@ -323,16 +322,10 @@ impl Board {
 
     /// Return the list of the immediate available move from the current board
     pub fn get_available_moves_from_piece(&self, piece: &Piece) -> Vec<Move> {
-        let mut available_next_move: Vec<Move> = vec![];
-
-        // for (index_piece, _) in &self.get_piece_index(piece).unwrap() {
-        for (index_cell, _) in &self.get_empty_cells() {
-            available_next_move
-                .push(Move::new(self.get_piece_index(piece).unwrap(), *index_cell).unwrap());
-        }
-        // }
-
-        available_next_move
+        self.get_empty_cells()
+            .into_iter()
+            .map(|(index_cell, _)| Move::new(piece.to_index(&self).unwrap(), index_cell).unwrap())
+            .collect::<Vec<Move>>()
     }
 }
 
@@ -458,15 +451,22 @@ impl Cell {
         Some((index % WIDTH_BOARD, index / HEIGHT_BOARD))
     }
 
-    fn from_index(board: &Board, index: usize) -> Result<&Self, ErrorGame> {
+    pub fn to_index(&self) -> Result<usize, ErrorGame> {
+        Ok(&self.x * WIDTH_BOARD + &self.y)
+    }
+
+    pub fn from_index(board: &Board, index: usize) -> Result<&Self, ErrorGame> {
         Ok(board
             .get_cells()
             .get(&index)
             .ok_or(ErrorGame::PieceDoesNotBelongPlayable)?)
     }
 
-    fn to_index(&self) -> Result<usize, ErrorGame> {
-        Ok(&self.x * WIDTH_BOARD + &self.y)
+    pub fn from_position(board: &Board, x: usize, y: usize) -> Cell {
+        *board
+            .get_cells()
+            .get(&Board::get_index(x, y).unwrap())
+            .unwrap()
     }
 }
 
@@ -564,7 +564,12 @@ mod tests {
         let mut board = Board::create();
 
         //Play the first piece in first cell of the board
-        board.play_piece(INDEX_PIECE, INDEX_CELL).unwrap();
+        board
+            .play(
+                Piece::from_index(&board, INDEX_PIECE).unwrap(),
+                Cell::from_index(&board, INDEX_CELL).unwrap(),
+            )
+            .unwrap();
 
         //Should haven't none in the first cell after play
         let cell = board.get_cells().get(&INDEX_CELL).unwrap();
@@ -580,7 +585,13 @@ mod tests {
         let mut board = Board::create();
 
         //Play the first piece in first cell of the board
-        let piece_played = board.play_piece(INDEX_PIECE, INDEX_CELL).unwrap();
+
+        let piece_played = board
+            .play(
+                Piece::from_index(&board, INDEX_PIECE).unwrap(),
+                Cell::from_index(&board, INDEX_CELL).unwrap(),
+            )
+            .unwrap();
         assert_eq!(board[INDEX_CELL].piece.unwrap(), piece_played);
     }
 
@@ -590,14 +601,16 @@ mod tests {
         let mut board = Board::create();
 
         //Piece is now removed
-        board.remove_piece(INDEX_PIECE).unwrap();
+        board
+            .remove(Piece::from_index(&board, INDEX_PIECE).unwrap())
+            .unwrap();
 
         //Piece is not playable anymore
         assert_eq!(board.available_pieces.get(&INDEX_PIECE), None);
 
         //And if you try to access, you got a PieceDoesNotBelongPlayable error
         let error_expected = Err(ErrorGame::PieceDoesNotBelongPlayable);
-        assert_eq!(board.get_piece_from_available(INDEX_PIECE), error_expected);
+        assert_eq!(Piece::from_index(&board, INDEX_PIECE), error_expected);
     }
 
     ///Index board accessor out of range
@@ -616,23 +629,23 @@ mod tests {
         let p3 = Piece::from("DETC"); // index 10
         let p4 = Piece::from("DETS"); // index 11
 
-        assert_eq!(board.get_piece_index(&p1).unwrap(), 8);
-        assert_eq!(board.get_piece_index(&p1).unwrap(), 8);
-        assert_eq!(board.get_piece_index(&p2).unwrap(), 9);
-        assert_eq!(board.get_piece_index(&p3).unwrap(), 10);
-        assert_eq!(board.get_piece_index(&p4).unwrap(), 11);
-        assert_eq!(board.get_piece_index(&p4).unwrap(), 11);
-        assert_eq!(board.get_piece_index(&p4).unwrap(), 11);
+        assert_eq!(p1.to_index(&board).unwrap(), 8);
+        assert_eq!(p1.to_index(&board).unwrap(), 8);
+        assert_eq!(p2.to_index(&board).unwrap(), 9);
+        assert_eq!(p3.to_index(&board).unwrap(), 10);
+        assert_eq!(p4.to_index(&board).unwrap(), 11);
+        assert_eq!(p4.to_index(&board).unwrap(), 11);
+        assert_eq!(p4.to_index(&board).unwrap(), 11);
 
         //Now we remove each piece from available pool of piece
-        assert_eq!(board.get_piece_index(&p1).unwrap(), 8);
-        board.remove_piece(8).unwrap();
-        assert_eq!(board.get_piece_index(&p2).unwrap(), 9);
-        board.remove_piece(9).unwrap();
-        assert_eq!(board.get_piece_index(&p3).unwrap(), 10);
-        board.remove_piece(10).unwrap();
-        assert_eq!(board.get_piece_index(&p4).unwrap(), 11);
-        board.remove_piece(11).unwrap();
+        assert_eq!(p1.to_index(&board).unwrap(), 8);
+        board.remove(Piece::from_index(&board, 8).unwrap());
+        assert_eq!(p2.to_index(&board).unwrap(), 9);
+        board.remove(Piece::from_index(&board, 9).unwrap());
+        assert_eq!(p3.to_index(&board).unwrap(), 10);
+        board.remove(Piece::from_index(&board, 10).unwrap());
+        assert_eq!(p4.to_index(&board).unwrap(), 11);
+        board.remove(Piece::from_index(&board, 11).unwrap());
     }
 
     #[test]
@@ -642,7 +655,12 @@ mod tests {
 
         //Play the first piece in first cell of the board
         for play in &plays {
-            board.play_piece(play.0, play.1).unwrap();
+            board
+                .play(
+                    Piece::from_index(&board, play.0).unwrap(),
+                    Cell::from_index(&board, play.1).unwrap(),
+                )
+                .unwrap();
         }
 
         let mut btree_win: BTreeMap<usize, Cell> = BTreeMap::new();
@@ -662,7 +680,12 @@ mod tests {
 
         //Play the first piece in first cell of the board
         for play in &plays {
-            board.play_piece(play.0, play.1).unwrap();
+            board
+                .play(
+                    Piece::from_index(&board, play.0).unwrap(),
+                    Cell::from_index(&board, play.1).unwrap(),
+                )
+                .unwrap();
         }
 
         for play in &plays {
@@ -678,17 +701,42 @@ mod tests {
         let mut board = Board::create();
 
         //Play the first piece in first cell of the board
-        board.play_piece(8, 0).unwrap();
+        board
+            .play(
+                Piece::from_index(&board, 8).unwrap(),
+                Cell::from_index(&board, 0).unwrap(),
+            )
+            .unwrap();
         let maybe_cell_winning = board.board_state();
         assert_eq!(maybe_cell_winning, BoardState::GameInProgress);
 
         let mut board = Board::create();
 
         //Play the first piece in first cell of the board
-        board.play_piece(8, 0).unwrap();
-        board.play_piece(4, 1).unwrap();
-        board.play_piece(2, 2).unwrap();
-        board.play_piece(3, 4).unwrap();
+        board
+            .play(
+                Piece::from_index(&board, 8).unwrap(),
+                Cell::from_index(&board, 0).unwrap(),
+            )
+            .unwrap();
+        board
+            .play(
+                Piece::from_index(&board, 4).unwrap(),
+                Cell::from_index(&board, 1).unwrap(),
+            )
+            .unwrap();
+        board
+            .play(
+                Piece::from_index(&board, 2).unwrap(),
+                Cell::from_index(&board, 2).unwrap(),
+            )
+            .unwrap();
+        board
+            .play(
+                Piece::from_index(&board, 3).unwrap(),
+                Cell::from_index(&board, 4).unwrap(),
+            )
+            .unwrap();
 
         let maybe_cell_winning = board.board_state();
         assert_eq!(maybe_cell_winning, BoardState::GameInProgress);
@@ -719,10 +767,13 @@ mod tests {
         ];
 
         //Play the first piece in first cell of the board
-        for play in (0..16).zip(pieces) {
-            let piece_index = board.get_piece_index(&play.1).unwrap();
-            board.play_piece(piece_index, play.0).unwrap();
-            board.remove_piece(piece_index).unwrap();
+        for (cell, piece) in (0..16)
+            .map(|i| Cell::from_index(&board, i).unwrap())
+            .zip(pieces)
+        {
+            // let piece_index = Piece::from board.get_piece_index(&play.1).unwrap();
+            board.play(&piece, &cell).unwrap();
+            board.remove(&piece).unwrap();
         }
 
         println!("{}", board);

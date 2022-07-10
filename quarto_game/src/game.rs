@@ -311,28 +311,6 @@ mod tests {
         Ok(())
     }
 
-    /// Play the first piece in case num 25 (outside the board)
-    /// This test need refacto
-    fn start_new_game_and_try_to_play_piece_out_of_board_should_fail() -> Result<(), ErrorGame> {
-        let mut game = Game::pvp("p1", "p2");
-        let piece = Piece::from_index(&game.board, 0).unwrap();
-        assert_eq!(
-            game.play(
-                piece,
-                Cell::from_index(&game.board, 25).unwrap()
-            ),
-            Err(ErrorGame::IndexOutOfBound)
-        );
-        assert_eq!(
-            game.play(
-                piece,
-                Cell::from_index(&game.board, 16).unwrap()
-            ),
-            Err(ErrorGame::IndexOutOfBound)
-        );
-        Ok(())
-    }
-
     /// Play the same piece two time, should fail
     #[test]
     fn start_new_game_and_try_to_play_multiple_time_same_piece_should_fail() -> Result<(), ErrorGame>

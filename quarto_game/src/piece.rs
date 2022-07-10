@@ -1,6 +1,5 @@
 use crate::board::Board;
 use crate::board::BoardIndex;
-use crate::board::Positionnable;
 use crate::error::ErrorGame;
 use ansi_term::Colour as ConsoleColor;
 use enum_iterator::IntoEnumIterator;
@@ -260,11 +259,12 @@ impl Piece {
 }
 
 impl BoardIndex for Piece {
-    fn from_index(board: &Board, index: usize) -> Result<&Self, ErrorGame> {
+    fn from_index(board: &Board, index: usize) -> Result<Piece, ErrorGame> {
         board
             .get_available_pieces()
             .get(&index)
             .ok_or(ErrorGame::PieceDoesNotBelongPlayable)
+            .cloned()
     }
 
     fn to_index(&self, board: &Board) -> Result<usize, ErrorGame> {
@@ -434,7 +434,6 @@ mod tests {
     #[test]
     fn test_piece_position() {
         let mut board = Board::create();
-        error!("{}", board);
 
         let first_piece = Piece::from_index(&board, 0).unwrap();
         let second_piece = Piece::from_index(&board, 1).unwrap();
@@ -445,13 +444,14 @@ mod tests {
             .unwrap();
         board.remove(first_piece).unwrap();
 
+        trace!("First piece {} has been played in the first cell", first_piece);
+
         // The second piece become the first piece
-        assert_eq!(Piece::from_index(&board, 0).unwrap(), second_piece);
+        assert_eq!(Piece::from_index(&board, 0), Err(ErrorGame::PieceDoesNotBelongPlayable));
         // The first cell is not empty
         assert!(board[0].piece().is_some());
 
-        // The index 15 throw an error
-        assert_eq!(last_piece.to_index(&board).unwrap(), 14);
-        assert_eq!(Piece::from_index(&board, 15), Err(ErrorGame::PieceDoesNotBelongPlayable));
+        // The index of the last piece is always 15
+        assert_eq!(last_piece.to_index(&board).unwrap(), 15);
     }
 }

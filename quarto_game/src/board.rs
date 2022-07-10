@@ -1,4 +1,4 @@
-use crate::error::ErrorGame;
+use crate::{error::ErrorGame, piece};
 use ansi_term::Style;
 use enum_iterator::IntoEnumIterator;
 use log::error;
@@ -18,7 +18,9 @@ pub const WIDTH_BOARD: usize = 4;
 pub const HEIGHT_BOARD: usize = 4;
 
 pub trait BoardIndex {
-    fn from_index(board: &Board, index: usize) -> Result<&Self, ErrorGame>;
+    fn from_index(board: &Board, index: usize) -> Result<Self, ErrorGame>
+    where
+        Self: Sized;
     fn to_index(&self, board: &Board) -> Result<usize, ErrorGame>;
 }
 
@@ -81,7 +83,7 @@ impl Board {
     }
 
     /// Return index from (x; y) coordinate
-    pub fn get_index(x: usize, y: usize) -> Option<usize> {
+    pub fn get_index_from_coordinate(x: usize, y: usize) -> Option<usize> {
         if x >= WIDTH_BOARD || y >= HEIGHT_BOARD {
             return None;
         }
@@ -101,12 +103,9 @@ impl Board {
         let mut diagonal_cells_top_left_bottom_right: Vec<Cell> = vec![];
         let mut diagonal_cells_top_right_bottom_left: Vec<Cell> = vec![];
         for i in 0..WIDTH_BOARD {
-            diagonal_cells_top_left_bottom_right.push(Cell::from_position(board, i, i));
-            diagonal_cells_top_right_bottom_left.push(Cell::from_position(
-                board,
-                WIDTH_BOARD - i - 1,
-                i,
-            ));
+            diagonal_cells_top_left_bottom_right.push(Cell::from_coordinate(board, i, i).unwrap());
+            diagonal_cells_top_right_bottom_left
+                .push(Cell::from_coordinate(board, WIDTH_BOARD - i - 1, i).unwrap());
         }
 
         (
@@ -133,7 +132,7 @@ impl Board {
 
     /// Play a piece on the board
     /// Piece and cell are identify by their index in the HashMap
-    pub fn play(&mut self, piece: &Piece, cell: &Cell) -> Result<Piece, ErrorGame> {
+    pub fn play(&mut self, piece: Piece, cell: Cell) -> Result<Piece, ErrorGame> {
         if !self.can_play_another_turn() {
             return Err(ErrorGame::PieceDoesNotBelongPlayable);
         }
@@ -147,29 +146,34 @@ impl Board {
         //     .get(&piece_index)
         //     .ok_or(ErrorGame::PieceDoesNotBelongPlayable)?;
 
-        trace!("Cell before playing : {}", cell);
+        trace!(
+            "Cell (i = {}) before playing : {}",
+            cell.to_index().unwrap(),
+            cell
+        );
 
         // let cell = self.cells.get(&cell_index).unwrap();
         if let Some(piece) = cell.piece {
-            return Err(ErrorGame::CellIsNotEmpty(*cell, piece));
+            return Err(ErrorGame::CellIsNotEmpty(cell, piece));
         }
 
         let cell_index = cell.to_index()?;
         self.cells
             .entry(cell_index)
-            .and_modify(|f| f.piece = Some(*piece));
+            .and_modify(|f| f.piece = Some(piece));
 
         trace!(
-            "Cell after playing : {}",
+            "Cell (i = {}) after playing : {}",
+            cell_index,
             Cell::from_index(&self, cell_index).unwrap()
         );
 
-        Ok(*piece)
+        Ok(piece)
     }
 
     /// Remove the piece from available playable list
-    pub fn remove(&mut self, piece: &Piece) -> Result<Piece, ErrorGame> {
-        let index = piece.to_index(&self).unwrap();
+    pub fn remove(&mut self, piece: Piece) -> Result<Piece, ErrorGame> {
+        let index = piece.to_index(&self)?;
 
         trace!("Piece num {} remove from availables", index);
         self.available_pieces
@@ -183,11 +187,11 @@ impl Board {
     }
 
     /// Get the piece from the available stack
-    // pub fn get_piece_from_available(&self, index: usize) -> Result<&Piece, ErrorGame> {
-    //     self.available_pieces
-    //         .get(&index)
-    //         .ok_or(ErrorGame::PieceDoesNotBelongPlayable)
-    // }
+    pub fn get_piece_from_available(&self, index: usize) -> Result<&Piece, ErrorGame> {
+        self.available_pieces
+            .get(&index)
+            .ok_or(ErrorGame::PieceDoesNotBelongPlayable)
+    }
 
     /// Get the piece index
     // pub fn get_piece_index(&self, piece: &Piece) -> Result<usize, ErrorGame> {
@@ -233,7 +237,7 @@ impl Board {
             let mut vertical_cells: Vec<Cell> = Vec::with_capacity(HEIGHT_BOARD);
             'y_x: for j in 0..HEIGHT_BOARD {
                 //If the cell is empty -> break this loop iteration
-                let current_cell = Cell::from_position(&self, j, i);
+                let current_cell = Cell::from_coordinate(&self, j, i).unwrap();
                 if let None = current_cell.piece {
                     break 'y_x;
                 }
@@ -250,7 +254,7 @@ impl Board {
             let mut vertical_cells: Vec<Cell> = Vec::with_capacity(HEIGHT_BOARD);
             'y_y: for j in 0..HEIGHT_BOARD {
                 //If the cell is empty -> break this loop iteration
-                let current_cell = Cell::from_position(&self, i, j);
+                let current_cell = Cell::from_coordinate(&self, i, j).unwrap();
                 if let None = current_cell.piece {
                     break 'y_y;
                 }
@@ -311,9 +315,9 @@ impl Board {
     pub fn get_available_moves(&self) -> Vec<Move> {
         let mut available_next_move: Vec<Move> = vec![];
 
-        for (index_piece, _) in &self.get_available_pieces() {
-            for (index_cell, _) in &self.get_empty_cells() {
-                available_next_move.push(Move::new(*index_piece, *index_cell).unwrap());
+        for (_, piece) in &self.get_available_pieces() {
+            for (_, cell) in &self.get_empty_cells() {
+                available_next_move.push(Move::new(*piece, *cell));
             }
         }
 
@@ -321,10 +325,10 @@ impl Board {
     }
 
     /// Return the list of the immediate available move from the current board
-    pub fn get_available_moves_from_piece(&self, piece: &Piece) -> Vec<Move> {
+    pub fn get_available_moves_from_piece(&self, piece: Piece) -> Vec<Move> {
         self.get_empty_cells()
             .into_iter()
-            .map(|(index_cell, _)| Move::new(piece.to_index(&self).unwrap(), index_cell).unwrap())
+            .map(|(index_cell, _)| Move::new(piece, Cell::from_index(&self, index_cell).unwrap()))
             .collect::<Vec<Move>>()
     }
 }
@@ -440,9 +444,9 @@ impl Cell {
         Ok(Cell { piece: None, x, y })
     }
 
-    pub fn piece(&self) -> Option<Piece> {
-        self.piece
-    }
+    // pub fn from_coordinate(x: usize, y: usize) -> Result<Cell, ErrorGame> {
+    //     Cell::new(Board::get_index(x, y).ok_or(ErrorGame::IndexOutOfBound)?)
+    // }
 
     pub fn to_coordinate(index: usize) -> Option<(usize, usize)> {
         if index >= WIDTH_BOARD * HEIGHT_BOARD {
@@ -452,21 +456,30 @@ impl Cell {
     }
 
     pub fn to_index(&self) -> Result<usize, ErrorGame> {
-        Ok(&self.x * WIDTH_BOARD + &self.y)
+        Ok(&self.x + &self.y * HEIGHT_BOARD)
     }
 
-    pub fn from_index(board: &Board, index: usize) -> Result<&Self, ErrorGame> {
-        Ok(board
-            .get_cells()
-            .get(&index)
-            .ok_or(ErrorGame::PieceDoesNotBelongPlayable)?)
+    pub fn from_index(board: &Board, index: usize) -> Result<Self, ErrorGame> {
+        Ok(board[index])
+        // Ok(
+        //     *board
+        //     .get_cells()
+        //     .get(&index)
+        //     .ok_or(ErrorGame::IndexOutOfBound)?
+        //     )
     }
 
-    pub fn from_position(board: &Board, x: usize, y: usize) -> Cell {
-        *board
-            .get_cells()
-            .get(&Board::get_index(x, y).unwrap())
-            .unwrap()
+    pub fn from_coordinate(board: &Board, x: usize, y: usize) -> Result<Self, ErrorGame> {
+        Ok(board[Board::get_index_from_coordinate(x, y).unwrap()])
+        // Ok(*board
+        //     .get_cells()
+        //     .get(&Board::get_index(x, y).unwrap())
+        //     .unwrap()
+        //     )
+    }
+
+    pub fn piece(&self) -> Option<Piece> {
+        self.piece
     }
 }
 
@@ -491,17 +504,17 @@ mod tests {
 
     #[test]
     fn get_index_from_coordinate() {
-        assert_eq!(Board::get_index(0, 0), Some(0));
-        assert_eq!(Board::get_index(1, 0), Some(1));
-        assert_eq!(Board::get_index(0, 3), Some(12));
-        assert_eq!(Board::get_index(2, 2), Some(10));
+        assert_eq!(Board::get_index_from_coordinate(0, 0), Some(0));
+        assert_eq!(Board::get_index_from_coordinate(1, 0), Some(1));
+        assert_eq!(Board::get_index_from_coordinate(0, 3), Some(12));
+        assert_eq!(Board::get_index_from_coordinate(2, 2), Some(10));
 
-        assert_eq!(Board::get_index(3, 0).unwrap(), 3);
-        assert_eq!(Board::get_index(2, 1).unwrap(), 6);
-        assert_eq!(Board::get_index(1, 2).unwrap(), 9);
-        assert_eq!(Board::get_index(0, 3).unwrap(), 12);
+        assert_eq!(Board::get_index_from_coordinate(3, 0).unwrap(), 3);
+        assert_eq!(Board::get_index_from_coordinate(2, 1).unwrap(), 6);
+        assert_eq!(Board::get_index_from_coordinate(1, 2).unwrap(), 9);
+        assert_eq!(Board::get_index_from_coordinate(0, 3).unwrap(), 12);
 
-        assert_eq!(Board::get_index(4, 4), None);
+        assert_eq!(Board::get_index_from_coordinate(4, 4), None);
 
         assert_eq!(Cell::new(0).unwrap().to_index().unwrap(), 0);
         assert_eq!(Cell::new(10).unwrap().to_index().unwrap(), 10);
@@ -766,14 +779,16 @@ mod tests {
             Piece::from("DEXC"),
         ];
 
+        let cloned_board = board.clone();
+
         //Play the first piece in first cell of the board
         for (cell, piece) in (0..16)
-            .map(|i| Cell::from_index(&board, i).unwrap())
+            .map(|i| Cell::from_index(&cloned_board, i).unwrap())
             .zip(pieces)
         {
             // let piece_index = Piece::from board.get_piece_index(&play.1).unwrap();
-            board.play(&piece, &cell).unwrap();
-            board.remove(&piece).unwrap();
+            board.play(piece, cell).unwrap();
+            board.remove(piece).unwrap();
         }
 
         println!("{}", board);

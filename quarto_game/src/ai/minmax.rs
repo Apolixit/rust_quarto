@@ -1,4 +1,5 @@
 use crate::board::Board;
+use crate::board::BoardIndex;
 use crate::error::ErrorGame;
 use crate::piece::Piece;
 use crate::r#move::Move;
@@ -58,7 +59,7 @@ fn calc_next_moves_score(
     board: &Board,
     depth: usize,
     maximise: bool,
-    piece: Option<&Piece>,
+    piece: Option<Piece>,
 ) -> Vec<(Score, Move)> {
     let moves = get_moves(board, piece);
     let mut move_result: Vec<(Score, Move)> = vec![];
@@ -104,7 +105,7 @@ pub fn calc_move(
     board: &Board,
     depth: usize,
     maximise: bool,
-    piece: Option<&Piece>,
+    piece: Option<Piece>,
 ) -> Result<Move, ErrorGame> {
     let moves_score_result = calc_next_moves_score(board, depth, maximise, piece);
     // info!("Moves result = {:?}", move_result);
@@ -138,7 +139,7 @@ pub fn calc_move(
     // Move::new(0, 0).unwrap()
 }
 
-pub fn calc_piece(board: &Board, depth: usize, maximise: bool) -> &Piece {
+pub fn calc_piece(board: &Board, depth: usize, maximise: bool) -> Piece {
     // let mut move_score: Vec<(Move, Score)> = vec![];
     let moves_score_result = calc_next_moves_score(board, depth, maximise, None);
     // for current_move in board.get_available_moves() {
@@ -169,16 +170,17 @@ pub fn calc_piece(board: &Board, depth: usize, maximise: bool) -> &Piece {
     let mut best_move_per_piece: HashMap<usize, Score> = HashMap::new();
     for (new_score, new_move) in moves_score_result {
         best_move_per_piece
-            .entry(new_move.get_index_piece())
+            .entry(new_move.piece().to_index(&board).unwrap())
             .and_modify(|score| *score = max(*score, new_score))
             .or_insert(new_score);
     }
     info!("best_move_per_piece = {:?}", best_move_per_piece);
     let worst_score = best_move_per_piece.into_iter().min_by_key(|k| k.1).unwrap();
-    board.get_piece_from_available(worst_score.0).unwrap()
+    // board.get_piece_from_available(worst_score.0).unwrap()
+    Piece::from_index(&board, worst_score.0).unwrap()
 }
 
-fn get_moves(board: &Board, piece: Option<&Piece>) -> Vec<Move> {
+fn get_moves(board: &Board, piece: Option<Piece>) -> Vec<Move> {
     if let Some(piece) = piece {
         board.get_available_moves_from_piece(piece)
     } else {
@@ -187,11 +189,11 @@ fn get_moves(board: &Board, piece: Option<&Piece>) -> Vec<Move> {
 }
 
 fn play(board: &mut Board, m: &Move) {
-    if let Err(e) = board.play_piece(m.get_index_piece(), m.index_cell()) {
+    if let Err(e) = board.play(m.piece(), m.cell()) {
         error!("{}", e.message());
     }
 
-    board.remove_piece(m.get_index_piece()).unwrap();
+    board.remove(m.piece()).unwrap();
 }
 
 #[cfg(test)]
@@ -199,6 +201,7 @@ mod tests {
 
     use crate::ai::minmax::{calc_move, calc_piece};
     use crate::ai::Score;
+    use crate::board::{BoardIndex, Cell};
     use crate::r#move::Move;
     use crate::{board::Board, piece::Piece};
 
@@ -206,7 +209,8 @@ mod tests {
     fn test_best_play_should_win_in_one_depth() {
         // The first winning move the algorithm has to find in the next turn (depth = 1)
         // let winning_move = Move::new(2, 3).unwrap();
-        let winning_move = Move::new(12, 14).unwrap();
+        let mut board = Board::create();
+        let winning_move = Move::from_index(12, 14, &board).unwrap();
 
         let moves = vec![
             (Piece::from("WETS"), 0),
@@ -217,12 +221,14 @@ mod tests {
             (Piece::from("DETC"), 10),
         ];
 
-        let mut board = Board::create();
-
         for (piece_current, index_board) in moves {
-            let piece_index = board.get_piece_index(&piece_current).unwrap();
-            board.play_piece(piece_index, index_board).unwrap();
-            board.remove_piece(piece_index).unwrap();
+            board
+                .play(
+                    piece_current,
+                    Cell::from_index(&board, index_board).unwrap(),
+                )
+                .unwrap();
+            board.remove(piece_current).unwrap();
         }
 
         let best_first_move = calc_move(&board, 1, true, None).unwrap();
@@ -255,25 +261,36 @@ mod tests {
         let mut board = Board::create();
 
         for (piece_current, index_board) in moves {
-            let piece_index = board.get_piece_index(&piece_current).unwrap();
-            board.play_piece(piece_index, index_board).unwrap();
-            board.remove_piece(piece_index).unwrap();
+            board
+                .play(
+                    piece_current,
+                    Cell::from_index(&board, index_board).unwrap(),
+                )
+                .unwrap();
+            board.remove(piece_current).unwrap();
         }
 
         info!(
             "{:?}",
-            board.get_available_moves_from_piece(&Piece::from("DEXS"))
+            board.get_available_moves_from_piece(Piece::from("DEXS"))
         );
 
         info!("{}", board);
 
-        let best_first_move = calc_move(&board, 3, true, Some(&Piece::from("DEXS"))).unwrap();
+        let best_first_move = calc_move(&board, 3, true, Some(Piece::from("DEXS"))).unwrap();
         // let best_first_move = calc_move(&board, 2, true, None).unwrap();
         info!("best move = ({})", best_first_move);
 
         // Now we play
-        board.play_piece(best_first_move.get_index_piece(), best_first_move.index_cell()).unwrap();
-        board.remove_piece(best_first_move.get_index_piece()).unwrap();
+        board
+            .play(
+                best_first_move.piece(),
+                best_first_move.cell(),
+            )
+            .unwrap();
+        board
+            .remove(best_first_move.piece())
+            .unwrap();
 
         info!("{}", board);
 

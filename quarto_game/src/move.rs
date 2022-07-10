@@ -26,7 +26,7 @@ impl Move {
     }
 
     pub fn to_tuple(&self, board: &Board) -> (usize, usize) {
-        (self.piece.to_index(&board).unwrap(), self.cell().to_index().unwrap())
+        (self.piece.to_index(&board).unwrap(), self.cell().to_index())
     }
 
     pub fn piece(&self) -> Piece {

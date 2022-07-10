@@ -1,7 +1,7 @@
 use ansi_term::{Colour, Style};
 use quarto_game::{
-    board::BoardState,
-    game::{Game, PlayerType},
+    board::{BoardState, BoardIndex, Cell},
+    game::{Game, PlayerType}, piece::Piece,
 };
 use std::io;
 
@@ -48,7 +48,8 @@ fn main() {
                             .choose_piece_for_opponent(game.get_board());
                         println!("I choose {} for you", &piece);
 
-                        game.get_board().get_piece_index(&piece).unwrap()
+                        piece.to_index(&game.get_board()).unwrap()
+                        // game.get_board().get_piece_index(&piece).unwrap()
                     }
                 };
                 // let piece_key = read_input_index(
@@ -66,10 +67,7 @@ fn main() {
                     continue;
                 }
 
-                let piece_to_play = game
-                    .get_board()
-                    .get_piece_from_available(piece_key)
-                    .unwrap();
+                let piece_to_play = Piece::from_index(game.get_board(), piece_key).unwrap();
 
                 // let cell_key = read_input_index(
                 //     format!(
@@ -80,26 +78,26 @@ fn main() {
                 //     .as_str(),
                 // );
 
-                let cell_key: usize = match game.current_player().player_type() {
-                    PlayerType::HUMAN => read_input_index(
+                let cell_selected: Cell = match game.current_player().player_type() {
+                    PlayerType::HUMAN => Cell::from_index(game.get_board(), read_input_index(
                         format!(
                             "{} on which case do you wanna play the piece {} ?",
                             game.current_player(),
                             piece_to_play
                         )
                         .as_str(),
-                    ),
+                    )).unwrap(),
                     PlayerType::AI => {
                         let move_selected = game
                             .current_player()
                             .choose_move(piece_to_play, game.get_board())
                             .unwrap();
-                        println!("I play this on cell num {}", move_selected.index_cell() + 1);
-                        move_selected.index_cell()
+                        println!("I play this on cell num {}", move_selected.cell().to_index() + 1);
+                        move_selected.cell()
                     }
                 };
 
-                if let Err(e) = game.play_index(piece_key, cell_key) {
+                if let Err(e) = game.play(piece_to_play, cell_selected) {
                     println!("{}", e);
                     continue;
                 } else {

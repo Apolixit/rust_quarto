@@ -217,28 +217,28 @@ mod tests {
     #[test]
     pub fn test_all_direction_should_have_same_score() {
         let pieces_horizontal_second_line = vec![
-            (Piece::from("DFTC"), Score::Point(0), Board::get_index_from_coordinate(0, 1).unwrap()),
-            (Piece::from("DFXS"), Score::Point(2), Board::get_index_from_coordinate(1, 1).unwrap()),
-            (Piece::from("WETS"), Score::Point(4), Board::get_index_from_coordinate(2, 1).unwrap()),
-            (Piece::from("WEXS"), Score::Point(0), Board::get_index_from_coordinate(3, 1).unwrap()),
+            (Piece::from("DFTC"), Score::Point(0), Board::coordinate_to_index(0, 1).unwrap()),
+            (Piece::from("DFXS"), Score::Point(2), Board::coordinate_to_index(1, 1).unwrap()),
+            (Piece::from("WETS"), Score::Point(4), Board::coordinate_to_index(2, 1).unwrap()),
+            (Piece::from("WEXS"), Score::Point(0), Board::coordinate_to_index(3, 1).unwrap()),
         ];
         let pieces_vertical_third_line = vec![
-            (Piece::from("DFTC"), Score::Point(0), Board::get_index_from_coordinate(2, 0).unwrap()),
-            (Piece::from("DFXS"), Score::Point(2), Board::get_index_from_coordinate(2, 1).unwrap()),
-            (Piece::from("WETS"), Score::Point(4), Board::get_index_from_coordinate(2, 2).unwrap()),
-            (Piece::from("WEXS"), Score::Point(0), Board::get_index_from_coordinate(2, 3).unwrap()),
+            (Piece::from("DFTC"), Score::Point(0), Board::coordinate_to_index(2, 0).unwrap()),
+            (Piece::from("DFXS"), Score::Point(2), Board::coordinate_to_index(2, 1).unwrap()),
+            (Piece::from("WETS"), Score::Point(4), Board::coordinate_to_index(2, 2).unwrap()),
+            (Piece::from("WEXS"), Score::Point(0), Board::coordinate_to_index(2, 3).unwrap()),
         ];
         let pieces_diagonal_top_left_to_bottom_right = vec![
-            (Piece::from("DFTC"), Score::Point(0), Board::get_index_from_coordinate(0, 0).unwrap()),
-            (Piece::from("DFXS"), Score::Point(2), Board::get_index_from_coordinate(1, 1).unwrap()),
-            (Piece::from("WETS"), Score::Point(4), Board::get_index_from_coordinate(2, 2).unwrap()),
-            (Piece::from("WEXS"), Score::Point(0), Board::get_index_from_coordinate(3, 3).unwrap()),
+            (Piece::from("DFTC"), Score::Point(0), Board::coordinate_to_index(0, 0).unwrap()),
+            (Piece::from("DFXS"), Score::Point(2), Board::coordinate_to_index(1, 1).unwrap()),
+            (Piece::from("WETS"), Score::Point(4), Board::coordinate_to_index(2, 2).unwrap()),
+            (Piece::from("WEXS"), Score::Point(0), Board::coordinate_to_index(3, 3).unwrap()),
         ];
         let pieces_diagonal_top_right_to_bottom_left = vec![
-            (Piece::from("DFTC"), Score::Point(0), Board::get_index_from_coordinate(3, 0).unwrap()),
-            (Piece::from("DFXS"), Score::Point(2), Board::get_index_from_coordinate(2, 1).unwrap()),
-            (Piece::from("WETS"), Score::Point(4), Board::get_index_from_coordinate(1, 2).unwrap()),
-            (Piece::from("WEXS"), Score::Point(0), Board::get_index_from_coordinate(0, 3).unwrap()),
+            (Piece::from("DFTC"), Score::Point(0), Board::coordinate_to_index(3, 0).unwrap()),
+            (Piece::from("DFXS"), Score::Point(2), Board::coordinate_to_index(2, 1).unwrap()),
+            (Piece::from("WETS"), Score::Point(4), Board::coordinate_to_index(1, 2).unwrap()),
+            (Piece::from("WEXS"), Score::Point(0), Board::coordinate_to_index(0, 3).unwrap()),
         ];
 
         for scenario in vec![
@@ -300,12 +300,12 @@ mod tests {
     #[test]
     pub fn test_calc_winning_score() {
         test_scenario(vec![
-            (Piece::from("DFTC"), Score::Point(0), Board::get_index_from_coordinate(0, 0).unwrap()),
-            (Piece::from("WETS"), Score::Point(1), Board::get_index_from_coordinate(1, 1).unwrap()),
-            (Piece::from("WEXS"), Score::Point(4), Board::get_index_from_coordinate(1, 2).unwrap()),
-            (Piece::from("WFTS"), Score::Point(9), Board::get_index_from_coordinate(2, 1).unwrap()),
-            (Piece::from("DEXS"), Score::Point(12), Board::get_index_from_coordinate(1, 3).unwrap()),
-            (Piece::from("DFTS"), Score::Win, Board::get_index_from_coordinate(1, 0).unwrap()),
+            (Piece::from("DFTC"), Score::Point(0), Board::coordinate_to_index(0, 0).unwrap()),
+            (Piece::from("WETS"), Score::Point(1), Board::coordinate_to_index(1, 1).unwrap()),
+            (Piece::from("WEXS"), Score::Point(4), Board::coordinate_to_index(1, 2).unwrap()),
+            (Piece::from("WFTS"), Score::Point(9), Board::coordinate_to_index(2, 1).unwrap()),
+            (Piece::from("DEXS"), Score::Point(12), Board::coordinate_to_index(1, 3).unwrap()),
+            (Piece::from("DFTS"), Score::Win, Board::coordinate_to_index(1, 0).unwrap()),
         ]);
     }
 

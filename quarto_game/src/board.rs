@@ -83,20 +83,18 @@ impl Board {
     }
 
     /// Return index from (x; y) coordinate
-    pub fn get_index_from_coordinate(x: usize, y: usize) -> Option<usize> {
+    pub fn coordinate_to_index(x: usize, y: usize) -> Result<usize, ErrorGame> {
         if x >= WIDTH_BOARD || y >= HEIGHT_BOARD {
-            return None;
+            return Err(ErrorGame::IndexOutOfBound);
         }
-        Some(y * HEIGHT_BOARD + x)
+        Ok(y * HEIGHT_BOARD + x)
     }
 
-    /// Return (x; y) from index
-    #[allow(dead_code)]
-    fn get_cell_coordinate(index: usize) -> Option<(usize, usize)> {
+    pub fn index_to_coordinate(index: usize) -> Result<(usize, usize), ErrorGame> {
         if index >= WIDTH_BOARD * HEIGHT_BOARD {
-            return None;
+            return Err(ErrorGame::IndexOutOfBound);
         }
-        Some((index % WIDTH_BOARD, index / HEIGHT_BOARD))
+        Ok((index % WIDTH_BOARD, index / HEIGHT_BOARD))
     }
 
     pub fn get_diagonal_cells(board: &Board) -> (Vec<Cell>, Vec<Cell>) {
@@ -148,7 +146,7 @@ impl Board {
 
         trace!(
             "Cell (i = {}) before playing : {}",
-            cell.to_index().unwrap(),
+            cell.to_index(),
             cell
         );
 
@@ -157,7 +155,7 @@ impl Board {
             return Err(ErrorGame::CellIsNotEmpty(cell, piece));
         }
 
-        let cell_index = cell.to_index()?;
+        let cell_index = cell.to_index();
         self.cells
             .entry(cell_index)
             .and_modify(|f| f.piece = Some(piece));
@@ -378,9 +376,10 @@ impl Display for Board {
             legend = format!(
                 "{} \t {}: {}",
                 legend,
-                e.color().paint(e.acronym()),
+                e.color()[i % 2].paint(e.acronym()),
                 e.name()
             );
+
             if (i + 1) % 2 == 0 {
                 legend = format!("{}\n", legend);
             }
@@ -440,42 +439,35 @@ pub struct Cell {
 
 impl Cell {
     pub fn new(index: usize) -> Result<Cell, ErrorGame> {
-        let (x, y) = Cell::to_coordinate(index).ok_or(ErrorGame::IndexOutOfBound)?;
+        let (x, y) = Board::index_to_coordinate(index)?;
         Ok(Cell { piece: None, x, y })
     }
 
-    // pub fn from_coordinate(x: usize, y: usize) -> Result<Cell, ErrorGame> {
-    //     Cell::new(Board::get_index(x, y).ok_or(ErrorGame::IndexOutOfBound)?)
-    // }
-
-    pub fn to_coordinate(index: usize) -> Option<(usize, usize)> {
-        if index >= WIDTH_BOARD * HEIGHT_BOARD {
-            return None;
-        }
-        Some((index % WIDTH_BOARD, index / HEIGHT_BOARD))
+    pub fn to_index(&self) -> usize {
+        self.x + self.y * HEIGHT_BOARD
     }
 
-    pub fn to_index(&self) -> Result<usize, ErrorGame> {
-        Ok(&self.x + &self.y * HEIGHT_BOARD)
+    pub fn to_coordinate(&self) -> (usize, usize) {
+        (self.x, self.y)
     }
 
     pub fn from_index(board: &Board, index: usize) -> Result<Self, ErrorGame> {
-        Ok(board[index])
-        // Ok(
-        //     *board
-        //     .get_cells()
-        //     .get(&index)
-        //     .ok_or(ErrorGame::IndexOutOfBound)?
-        //     )
+        // Ok(board[index])
+        Ok(
+            *board
+            .get_cells()
+            .get(&index)
+            .ok_or(ErrorGame::IndexOutOfBound)?
+            )
     }
 
     pub fn from_coordinate(board: &Board, x: usize, y: usize) -> Result<Self, ErrorGame> {
-        Ok(board[Board::get_index_from_coordinate(x, y).unwrap()])
-        // Ok(*board
-        //     .get_cells()
-        //     .get(&Board::get_index(x, y).unwrap())
-        //     .unwrap()
-        //     )
+        // Ok(board[Board::get_index_from_coordinate(x, y).unwrap()])
+        Ok(*board
+            .get_cells()
+            .get(&Board::coordinate_to_index(x, y)?)
+            .unwrap()
+            )
     }
 
     pub fn piece(&self) -> Option<Piece> {
@@ -503,32 +495,57 @@ mod tests {
     use super::*;
 
     #[test]
-    fn get_index_from_coordinate() {
-        assert_eq!(Board::get_index_from_coordinate(0, 0), Some(0));
-        assert_eq!(Board::get_index_from_coordinate(1, 0), Some(1));
-        assert_eq!(Board::get_index_from_coordinate(0, 3), Some(12));
-        assert_eq!(Board::get_index_from_coordinate(2, 2), Some(10));
+    fn test_index_and_coordinate() {
+        assert_eq!(Board::coordinate_to_index(0, 0).unwrap(), 0);
+        assert_eq!(Board::coordinate_to_index(1, 0).unwrap(), 1);
+        assert_eq!(Board::coordinate_to_index(0, 3).unwrap(), 12);
+        assert_eq!(Board::coordinate_to_index(2, 2).unwrap(), 10);
 
-        assert_eq!(Board::get_index_from_coordinate(3, 0).unwrap(), 3);
-        assert_eq!(Board::get_index_from_coordinate(2, 1).unwrap(), 6);
-        assert_eq!(Board::get_index_from_coordinate(1, 2).unwrap(), 9);
-        assert_eq!(Board::get_index_from_coordinate(0, 3).unwrap(), 12);
+        assert_eq!(Board::coordinate_to_index(3, 0).unwrap(), 3);
+        assert_eq!(Board::coordinate_to_index(2, 1).unwrap(), 6);
+        assert_eq!(Board::coordinate_to_index(1, 2).unwrap(), 9);
+        assert_eq!(Board::coordinate_to_index(0, 3).unwrap(), 12);
 
-        assert_eq!(Board::get_index_from_coordinate(4, 4), None);
+        assert_eq!(Board::coordinate_to_index(4, 4), Err(ErrorGame::IndexOutOfBound));
 
-        assert_eq!(Cell::new(0).unwrap().to_index().unwrap(), 0);
-        assert_eq!(Cell::new(10).unwrap().to_index().unwrap(), 10);
-        assert_eq!(Cell::new(15).unwrap().to_index().unwrap(), 15);
+        assert_eq!(Cell::new(0).unwrap().to_index(), 0);
+        assert_eq!(Cell::new(10).unwrap().to_index(), 10);
+        assert_eq!(Cell::new(15).unwrap().to_index(), 15);
+
+
+        assert_eq!(Board::index_to_coordinate(0).unwrap(), (0, 0));
+        assert_eq!(Board::index_to_coordinate(1).unwrap(), (1, 0));
+        assert_eq!(Board::index_to_coordinate(12).unwrap(), (0, 3));
+        assert_eq!(Board::index_to_coordinate(10).unwrap(), (2, 2));
+
+        assert_eq!(Board::index_to_coordinate(20), Err(ErrorGame::IndexOutOfBound));
     }
 
     #[test]
-    fn get_coordinate_from_index() {
-        assert_eq!(Board::get_cell_coordinate(0), Some((0, 0)));
-        assert_eq!(Board::get_cell_coordinate(1), Some((1, 0)));
-        assert_eq!(Board::get_cell_coordinate(12), Some((0, 3)));
-        assert_eq!(Board::get_cell_coordinate(10), Some((2, 2)));
+    fn test_cell_manipulation() {
+        assert_eq!(Cell::new(0).unwrap(), Cell { piece : None, x: 0, y: 0 });
+        assert_eq!(Cell::new(10).unwrap(), Cell { piece : None, x: 2, y: 2 });
+        assert_eq!(Cell::new(15).unwrap(), Cell { piece : None, x: 3, y: 3 });
 
-        assert_eq!(Board::get_cell_coordinate(20), None);
+        assert_eq!(Cell::new(20), Err(ErrorGame::IndexOutOfBound));
+
+        let cell = Cell::new(10).unwrap();
+        assert_eq!(cell.to_index(), 10);
+        assert_eq!(cell.to_coordinate(), (2, 2));
+
+        let board = Board::create();
+        let cell_2 = Cell::from_coordinate(&board, 0, 0).unwrap();
+        assert_eq!(cell_2, Cell { piece : None, x: 0, y: 0 });
+        assert_eq!(cell_2.to_index(), 0);
+
+        assert_eq!(Cell::from_coordinate(&board, 20, 0), Err(ErrorGame::IndexOutOfBound));
+        assert_eq!(Cell::from_coordinate(&board, 0, 20), Err(ErrorGame::IndexOutOfBound));
+        assert_eq!(Cell::from_coordinate(&board, 20, 20), Err(ErrorGame::IndexOutOfBound));
+
+        assert_eq!(Cell::from_index(&board, 0).unwrap(), Cell { piece : None, x: 0, y: 0 });
+        assert_eq!(Cell::from_index(&board, 0).unwrap().to_coordinate(), (0, 0));
+
+        assert_eq!(Cell::from_index(&board, 20), Err(ErrorGame::IndexOutOfBound));
     }
 
     /// Quarto game has 16 piece

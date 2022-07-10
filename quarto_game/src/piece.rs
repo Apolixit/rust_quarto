@@ -14,7 +14,7 @@ pub trait PieceFeature {
     fn name(&self) -> &str;
 
     /// The color display on the board
-    fn color(&self) -> ConsoleColor;
+    fn color(&self) -> [ConsoleColor; 2];
 
     /// Dynamic box which allow to iterate on each type of piece dynamically
     fn to_vec_boxed() -> Vec<Box<dyn PieceFeature>>
@@ -51,8 +51,11 @@ impl PieceFeature for Color {
         }
     }
 
-    fn color(&self) -> ConsoleColor {
-        ConsoleColor::Blue
+    fn color(&self) -> [ConsoleColor; 2] {
+        [
+            ConsoleColor::RGB(200, 200, 200),
+            ConsoleColor::RGB(50, 50, 50),
+        ]
     }
 
     fn to_vec_boxed() -> Vec<Box<dyn PieceFeature>> {
@@ -62,7 +65,11 @@ impl PieceFeature for Color {
 
 impl Display for Color {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.color().paint(self.acronym()))
+        write!(
+            f,
+            "{}",
+            self.color()[if self == &Self::White { 0 } else { 1 }].paint(self.acronym())
+        )
     }
 }
 
@@ -97,8 +104,11 @@ impl PieceFeature for Hole {
         }
     }
 
-    fn color(&self) -> ConsoleColor {
-        ConsoleColor::Purple
+    fn color(&self) -> [ConsoleColor; 2] {
+        [
+            ConsoleColor::RGB(115, 11, 222),
+            ConsoleColor::RGB(189, 0, 245),
+        ]
     }
 
     fn to_vec_boxed() -> Vec<Box<dyn PieceFeature>> {
@@ -108,7 +118,11 @@ impl PieceFeature for Hole {
 
 impl Display for Hole {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.color().paint(self.acronym()))
+        write!(
+            f,
+            "{}",
+            self.color()[if self == &Self::Full { 0 } else { 1 }].paint(self.acronym())
+        )
     }
 }
 
@@ -144,8 +158,11 @@ impl PieceFeature for Height {
         }
     }
 
-    fn color(&self) -> ConsoleColor {
-        ConsoleColor::Red
+    fn color(&self) -> [ConsoleColor; 2] {
+        [
+            ConsoleColor::RGB(222, 15, 10),
+            ConsoleColor::RGB(250, 122, 13),
+        ]
     }
 
     fn to_vec_boxed() -> Vec<Box<dyn PieceFeature>> {
@@ -155,7 +172,11 @@ impl PieceFeature for Height {
 
 impl Display for Height {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.color().paint(self.acronym()))
+        write!(
+            f,
+            "{}",
+            self.color()[if self == &Self::Tall { 0 } else { 1 }].paint(self.acronym())
+        )
     }
 }
 
@@ -191,8 +212,11 @@ impl PieceFeature for Shape {
         }
     }
 
-    fn color(&self) -> ConsoleColor {
-        ConsoleColor::Green
+    fn color(&self) -> [ConsoleColor; 2] {
+        [
+            ConsoleColor::RGB(37, 222, 11),
+            ConsoleColor::RGB(29, 245, 177),
+        ]
     }
 
     fn to_vec_boxed() -> Vec<Box<dyn PieceFeature>> {
@@ -202,7 +226,11 @@ impl PieceFeature for Shape {
 
 impl Display for Shape {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.color().paint(self.acronym()))
+        write!(
+            f,
+            "{}",
+            self.color()[if self == &Self::Square { 0 } else { 1 }].paint(self.acronym())
+        )
     }
 }
 
@@ -444,10 +472,16 @@ mod tests {
             .unwrap();
         board.remove(first_piece).unwrap();
 
-        trace!("First piece {} has been played in the first cell", first_piece);
+        trace!(
+            "First piece {} has been played in the first cell",
+            first_piece
+        );
 
         // The second piece become the first piece
-        assert_eq!(Piece::from_index(&board, 0), Err(ErrorGame::PieceDoesNotBelongPlayable));
+        assert_eq!(
+            Piece::from_index(&board, 0),
+            Err(ErrorGame::PieceDoesNotBelongPlayable)
+        );
         // The first cell is not empty
         assert!(board[0].piece().is_some());
 

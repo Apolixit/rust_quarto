@@ -8,7 +8,7 @@ use crate::error::ErrorGame;
 use crate::piece::Piece;
 
 /// Represent a move on the board
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Copy)]
 pub struct Move {
     piece: Piece,
     cell: Cell,

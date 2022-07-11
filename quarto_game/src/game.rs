@@ -1,7 +1,7 @@
 use std::fmt::Display;
 
 use crate::{
-    ai,
+    ai::{self, Strategy},
     board::{Board, BoardIndex, Cell},
     error::ErrorGame,
     piece::Piece,
@@ -88,17 +88,17 @@ impl AI {
         String::from("AI")
     }
 
-    /// Func to decide which move to play
-    pub fn choose_move(&self, piece: Piece, board: &Board) -> Result<Move, ErrorGame> {
-        info!("Calc move with depth = {}", 2);
-        ai::calc_move(board, 2, true, Some(piece))
-    }
+    // /// Func to decide which move to play
+    // pub fn choose_move(&self, piece: Piece, board: &Board) -> Result<Move, ErrorGame> {
+    //     info!("Calc move with depth = {}", 2);
+    //     ai::MinMax::calc_move(board, 2, true, Some(piece))
+    // }
 
-    /// Func to decide which piece to give to his opponent
-    pub fn choose_piece_for_opponent(&self, board: &Board) -> Piece {
-        info!("Searching piece with depth = {}", 1);
-        ai::calc_piece(board, 2, true).to_owned()
-    }
+    // /// Func to decide which piece to give to his opponent
+    // pub fn choose_piece_for_opponent(&self, board: &Board) -> Piece {
+    //     info!("Searching piece with depth = {}", 1);
+    //     ai::MinMax::calc_worst_piece(board, 2).to_owned()
+    // }
 }
 
 impl Player for AI {
@@ -111,11 +111,11 @@ impl Player for AI {
     }
 
     fn choose_move(&self, piece: Piece, board: &Board) -> Result<Move, ErrorGame> {
-        ai::calc_move(board, 2, true, Some(piece))
+        ai::MinMax::calc_move(board, 2, true, Some(piece))
     }
 
     fn choose_piece_for_opponent(&self, board: &Board) -> Piece {
-        ai::calc_piece(board, 2, true).to_owned()
+        ai::MinMax::choose_piece_for_opponent(board, 2).to_owned()
     }
 }
 

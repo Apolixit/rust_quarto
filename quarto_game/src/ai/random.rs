@@ -6,12 +6,30 @@ use super::{get_moves, Strategy};
 
 pub struct RandomAI {}
 
+impl RandomAI {
+    pub fn new() -> RandomAI {
+        RandomAI::default()
+    }
+
+    pub fn name() -> String {
+        String::from("random")
+    }
+}
+impl Default for RandomAI {
+    fn default() -> Self {
+        Self {  }
+    }
+}
+
 /// This strategy is use for the first AI move, because
 impl Strategy for RandomAI {
+    fn name(&self) -> String {
+        RandomAI::name()
+    }
+
     fn calc_move(
+        &self,
         board: &Board,
-        _: usize,
-        _: bool,
         piece: Option<Piece>,
     ) -> Result<Move, ErrorGame> {
         let moves = get_moves(&board, piece);
@@ -20,7 +38,7 @@ impl Strategy for RandomAI {
             .ok_or(ErrorGame::NoBestMove)?)
     }
 
-    fn choose_piece_for_opponent(board: &Board, _: usize) -> Piece {
+    fn choose_piece_for_opponent(&self, board: &Board) -> Piece {
         let pieces = board.get_available_pieces();
         *pieces
             .get(&rand::thread_rng().gen_range(0..pieces.len()))
@@ -41,7 +59,7 @@ use super::RandomAI;
     fn test_calc_move_random() {
         let board = Board::create();
 
-        let move_result = RandomAI::calc_move(&board, 0, true, None);
+        let move_result = RandomAI::new().calc_move(&board, None);
 
         assert!(move_result.is_ok());
     }
@@ -49,7 +67,7 @@ use super::RandomAI;
     #[test]
     fn test_choose_piece_for_opponent_random() {
         let board = Board::create();
-        RandomAI::choose_piece_for_opponent(&board, 0);
+        RandomAI::new().choose_piece_for_opponent(&board);
         // Just to check nothing panic
     }
 }

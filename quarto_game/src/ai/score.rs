@@ -70,10 +70,10 @@ impl Score {
             return 0 as usize;
         }
 
-        // All the piece has been played and the line is not winning -> score = 0 because it's a bad move
-        if pieces.len() == 4 && !Piece::check_piece_is_winning(&mut pieces) {
-            return 0 as usize;
-        }
+        //All the piece has been played and the line is not winning -> score = 0 because it's a bad move
+        // if pieces.len() == 4 && !Piece::check_piece_is_winning(&mut pieces) {
+        //     return 0 as usize;
+        // }
 
         let b_pieces = &pieces;
 
@@ -115,7 +115,7 @@ impl Score {
                 .filter(|f| f.shape == Shape::Square)
                 .count(),
         ];
-        trace!("Points = {:?}", points);
+        // trace!("Points = {:?}", points);
         Score::calc_point(points)
     }
 
@@ -207,11 +207,13 @@ mod tests {
 
         for (piece_current, score_current, cell_index) in moves {
             let cell = Cell::from_index(&board, cell_index).unwrap();
-            info!("piece = {} / cell = {}", piece_current, cell);
+            
             board.play(piece_current, cell).unwrap();
             board.remove(piece_current).unwrap();
 
-            assert_eq!(Score::calc_score(&board), score_current);
+            let score = Score::calc_score(&board);
+            info!("Add piece = {} / cell = {:?} / Score = {:?}", piece_current, cell, score);
+            assert_eq!(score, score_current);
         }
     }
     #[test]
@@ -220,25 +222,25 @@ mod tests {
             (Piece::from("DFTC"), Score::Point(0), Board::coordinate_to_index(0, 1).unwrap()),
             (Piece::from("DFXS"), Score::Point(2), Board::coordinate_to_index(1, 1).unwrap()),
             (Piece::from("WETS"), Score::Point(4), Board::coordinate_to_index(2, 1).unwrap()),
-            (Piece::from("WEXS"), Score::Point(0), Board::coordinate_to_index(3, 1).unwrap()),
+            (Piece::from("WEXS"), Score::Point(8), Board::coordinate_to_index(3, 1).unwrap()),
         ];
         let pieces_vertical_third_line = vec![
             (Piece::from("DFTC"), Score::Point(0), Board::coordinate_to_index(2, 0).unwrap()),
             (Piece::from("DFXS"), Score::Point(2), Board::coordinate_to_index(2, 1).unwrap()),
             (Piece::from("WETS"), Score::Point(4), Board::coordinate_to_index(2, 2).unwrap()),
-            (Piece::from("WEXS"), Score::Point(0), Board::coordinate_to_index(2, 3).unwrap()),
+            (Piece::from("WEXS"), Score::Point(8), Board::coordinate_to_index(2, 3).unwrap()),
         ];
         let pieces_diagonal_top_left_to_bottom_right = vec![
             (Piece::from("DFTC"), Score::Point(0), Board::coordinate_to_index(0, 0).unwrap()),
             (Piece::from("DFXS"), Score::Point(2), Board::coordinate_to_index(1, 1).unwrap()),
             (Piece::from("WETS"), Score::Point(4), Board::coordinate_to_index(2, 2).unwrap()),
-            (Piece::from("WEXS"), Score::Point(0), Board::coordinate_to_index(3, 3).unwrap()),
+            (Piece::from("WEXS"), Score::Point(8), Board::coordinate_to_index(3, 3).unwrap()),
         ];
         let pieces_diagonal_top_right_to_bottom_left = vec![
             (Piece::from("DFTC"), Score::Point(0), Board::coordinate_to_index(3, 0).unwrap()),
             (Piece::from("DFXS"), Score::Point(2), Board::coordinate_to_index(2, 1).unwrap()),
             (Piece::from("WETS"), Score::Point(4), Board::coordinate_to_index(1, 2).unwrap()),
-            (Piece::from("WEXS"), Score::Point(0), Board::coordinate_to_index(0, 3).unwrap()),
+            (Piece::from("WEXS"), Score::Point(8), Board::coordinate_to_index(0, 3).unwrap()),
         ];
 
         for scenario in vec![
@@ -292,8 +294,8 @@ mod tests {
             (Piece::from("WETS"), Score::Point(0), 0),
             (Piece::from("DFTC"), Score::Point(1), 1),
             (Piece::from("DFTS"), Score::Point(5), 2),
-            (Piece::from("DFXS"), Score::Point(0), 3),
-            (Piece::from("WFTS"), Score::Point(3), 4),
+            (Piece::from("DFXS"), Score::Point(8), 3),
+            (Piece::from("WFTS"), Score::Point(11), 4),
         ]);
     }
 

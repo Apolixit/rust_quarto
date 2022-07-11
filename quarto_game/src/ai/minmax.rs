@@ -1,6 +1,8 @@
 use crate::ai::play;
 use crate::board::Board;
 use crate::board::BoardIndex;
+use crate::board::HEIGHT_BOARD;
+use crate::board::WIDTH_BOARD;
 use crate::error::ErrorGame;
 use crate::piece::Piece;
 use crate::r#move::Move;
@@ -12,9 +14,28 @@ use super::Strategy;
 use super::get_moves;
 use super::Score;
 
-pub struct MinMax {}
+pub struct MinMax {
+    depth: usize,
+    maximise: bool,
+}
 
 impl MinMax {
+    pub fn new(depth: usize, maximise: bool) -> MinMax {
+        MinMax { depth, maximise }
+    }
+
+    pub fn name() -> String {
+        String::from("minmax")
+    }
+
+    pub fn depth(&self) -> usize {
+        self.depth
+    }
+
+    pub fn set_depth(&mut self, depth: usize) {
+        self.depth = depth;
+    }
+
     /// MinMax algorithm
     fn minmax(board: &Board, depth: usize, maximise: bool, available_moves: &Vec<Move>) -> Score {
         if depth == 0 || !board.can_play_another_turn() {
@@ -26,31 +47,43 @@ impl MinMax {
 
         trace!("Current MinMax depth = {}", depth);
 
-        let mut value;
+        let mut score;
         if maximise {
-            value = Score::Point(usize::MIN);
+            score = Score::Point(usize::MIN);
             for m in available_moves {
                 let mut board = board.clone();
                 play(&mut board, &m);
-                value = max(
-                    value,
+                
+                let save_old_score = score;
+                score = max(
+                    score,
                     MinMax::minmax(&board, depth - 1, !maximise, &board.get_available_moves()),
                 );
+                if score != save_old_score {
+                    trace!("From move ({:?}) : maximising / depth = {} / old score = {:?} / minmax score = {:?} ", m, depth, save_old_score, score);
+                }
             }
         } else {
-            value = Score::Point(usize::MAX);
+            score = Score::Win;
             for m in available_moves {
                 let mut board = board.clone();
                 play(&mut board, &m);
-                value = min(
-                    value,
+                
+                let save_old_score = score;
+                score = min(
+                    score,
                     MinMax::minmax(&board, depth - 1, !maximise, &board.get_available_moves()),
                 );
+
+                if score != save_old_score {
+                    trace!("From move ({:?}) : minimising / depth = {} / old score = {:?} / minmax score = {:?}", m, depth, save_old_score, score);
+                }
             }
         }
-        value
+        score
     }
 
+    /// Calc the score for each move (wrapper of minmax function)
     fn calc_next_moves_score(
         board: &Board,
         depth: usize,
@@ -69,40 +102,63 @@ impl MinMax {
 
         move_result
     }
+
+    /// The combinaison (nb_piece_already_played, depth to search)
+    /// For example here: 
+    ///     - between 0 and 5 pieces, we search with depth = 2
+    ///     - between 5 and 8 pieces, we search with depth = 3
+    ///     - etc
+    /// I try this to have a better algo in end game
+    pub fn calc_adequat_depth(nb_piece_left: usize) -> usize {
+        // const THRESHOLD_PIECE_PLAYED_DEPTH: Vec<((usize, usize), usize)> = vec![((0, 5), 2), ((5, 8), 3), ((8, 11), 4), ((11, 16), 5)];
+        // let max_cells = WIDTH_BOARD * HEIGHT_BOARD - 1;
+        // match nb_piece_left {
+        //     0..=4 => 2,
+        //     5..=7 => 3,
+        //     8..=10 => 4,
+        //     11..=15 => 5,
+        //     _ => 0
+        // }
+        2
+    }
+
+    
 }
 
 impl Strategy for MinMax {
+    fn name(&self) -> String {
+        MinMax::name()
+    }
+
     fn calc_move(
+        &self,
         board: &Board,
-        depth: usize,
-        maximise: bool,
         piece: Option<Piece>,
     ) -> Result<Move, ErrorGame> {
-        let moves_score_result = MinMax::calc_next_moves_score(board, depth, maximise, piece);
+        let moves_score_result = MinMax::calc_next_moves_score(board, self.depth, self.maximise, piece);
+        info!("calc_move >> moves_score_result = {:?}", moves_score_result);
 
-        Ok(if maximise {
+        Ok(if self.maximise {
             //If maximise, we take take the max score
             let res = moves_score_result
                 .into_iter()
                 .max_by_key(|s| s.0)
-                .ok_or(ErrorGame::NoBestMove)?
-                .1;
-            info!("The max score selected is : {}", &res);
-            res
+                .ok_or(ErrorGame::NoBestMove)?;
+            info!("The max score selected is : {:?} for the move : {}", &res.0, &res.1);
+            res.1
         } else {
             // If minimise we take the min
             let res = moves_score_result
                 .into_iter()
                 .min_by_key(|s| s.0)
-                .ok_or(ErrorGame::NoBestMove)?
-                .1;
-            info!("The min score selected is : {}", &res);
-            res
+                .ok_or(ErrorGame::NoBestMove)?;
+            info!("The min score selected is : {:?} for the move : {}", &res.0, &res.1);
+            res.1
         })
     }
 
-    fn choose_piece_for_opponent(board: &Board, depth: usize) -> Piece {
-        let moves_score_result = MinMax::calc_next_moves_score(board, depth, true, None);
+    fn choose_piece_for_opponent(&self, board: &Board) -> Piece {
+        let moves_score_result = MinMax::calc_next_moves_score(board, self.depth, true, None);
 
         let mut best_move_per_piece: HashMap<usize, Score> = HashMap::new();
         for (new_score, new_move) in moves_score_result {
@@ -120,11 +176,91 @@ impl Strategy for MinMax {
 #[cfg(test)]
 mod tests {
 
-    use crate::ai::{Score, MinMax, Strategy};
+    use crate::ai::get_moves;
+use crate::ai::Score;
+use crate::ai::minmax;
+use crate::ai::play;
+use crate::ai::{MinMax, Strategy};
     use crate::board::{BoardIndex, Cell};
     use crate::r#move::Move;
     use crate::{board::Board, piece::Piece};
 
+    fn late_game(nb_piece_left: usize) -> Vec<Piece> {
+        let mut pieces: Vec<Piece> = vec![
+            Piece::from("WETS"),
+            Piece::from("DFTC"),
+            Piece::from("DFTS"),
+            Piece::from("DFXS"),
+            Piece::from("WFTS"),
+            Piece::from("WFXS"),
+            Piece::from("DETS"),
+            Piece::from("DFXC"),
+            Piece::from("DEXS"),
+            Piece::from("WEXC"),
+            Piece::from("WFXC"),
+            Piece::from("WETC"),
+            Piece::from("DETC"),
+            Piece::from("WFTC"),
+            Piece::from("WEXS"),
+            Piece::from("DEXC"),
+        ];
+
+        let mut nb_piece_left = nb_piece_left;
+        while(nb_piece_left > 0) {
+            pieces.remove(pieces.len() - 1);
+            nb_piece_left -= 1;
+        }
+        
+        pieces
+    }
+
+    fn fill_board(nb_piece_left: usize) -> Board {
+        let mut board = Board::create();
+
+        let cloned_board = board.clone();
+
+        //Play the first piece in first cell of the board
+        for (cell, piece) in (0..14)
+            .map(|i| Cell::from_index(&cloned_board, i).unwrap())
+            .zip(late_game(nb_piece_left))
+        {
+            // let piece_index = Piece::from board.get_piece_index(&play.1).unwrap();
+            board.play(piece, cell).unwrap();
+            board.remove(piece).unwrap();
+        }
+
+        board
+    }
+    #[test]
+    fn test_minmax_tree() {
+        
+        let mut board = fill_board(6);
+
+        // We have 3 pieces and cells which haven't been played, so we have 9 moves available
+        // assert_eq!(board.get_available_moves().len(), 9);
+        warn!("{}", board);
+        // info!("{:?}", Score::calc_score(&board));
+        // info!("{:?}", board.board_state());
+
+        let piece_to_play = Piece::from_index(&board, 1).unwrap();
+
+        let minmax = MinMax::new(1, true);
+        let best_minmax_score = MinMax::minmax(&board, minmax.depth, minmax.maximise, &get_moves(&board, Some(piece_to_play)));
+        let best_first_move = minmax.calc_move(&board, Some(piece_to_play)).unwrap();
+
+        // We got the best score from minmax and we got the best move, now we check that playing this move give the max score
+        board.play(best_first_move.piece(), best_first_move.cell()).unwrap();
+
+        warn!("{}", board);
+        assert_eq!(Score::calc_score(&board), best_minmax_score);
+        board.board_state();
+    }
+
+    #[test]
+    fn test_depth_0_eq_current_board_score() {
+        let board = fill_board(5);
+        assert_eq!(Score::calc_score(&board), MinMax::minmax(&board, 0, true, &get_moves(&board, None)));
+    }
     #[test]
     fn test_best_play_should_win_in_one_depth() {
         // The first winning move the algorithm has to find in the next turn (depth = 1)
@@ -151,20 +287,35 @@ mod tests {
             board.remove(piece_current).unwrap();
         }
 
-        let best_first_move = MinMax::calc_move(&board, 1, true, None).unwrap();
+        let minmax = MinMax::new(1, true);
+        let best_first_move = minmax.calc_move(&board, None).unwrap();
         assert_eq!(best_first_move, winning_move);
     }
 
+    
+
     #[test]
-    fn test_choose_piece_when_start() {
-        let depth: usize = 1;
+    fn test_choose_opponent_piece() {
+        let mut board = Board::create();
 
-        info!("Start a new game");
-        let board = Board::create();
-        info!("Start calc_piece with depth = {}", depth);
-        let piece_choose = MinMax::choose_piece_for_opponent(&board, depth);
+        let moves: Vec<Move> = vec![
+            (Move::new(Piece::from("DFXC"), Cell::from_index(&board, 0).unwrap())),
+            (Move::new(Piece::from("DETS"), Cell::from_index(&board, 0).unwrap())),
+            (Move::new(Piece::from("WFTC"), Cell::from_index(&board, 6).unwrap())),
+            (Move::new(Piece::from("DFTC"), Cell::from_index(&board, 7).unwrap())),
+            (Move::new(Piece::from("WFXS"), Cell::from_index(&board, 8).unwrap())),
+            (Move::new(Piece::from("WETC"), Cell::from_index(&board, 9).unwrap())),
+            (Move::new(Piece::from("WEXC"), Cell::from_index(&board, 10).unwrap())),
+            (Move::new(Piece::from("DEXS"), Cell::from_index(&board, 15).unwrap())),
+        ];
+        for m in moves {
+            play(&mut board, &m);
+        }
 
-        info!("The piece {} has been choose", piece_choose);
+        warn!("{}", board);
+        let minmax = MinMax::new(2, true);
+        let ai_piece = minmax.choose_piece_for_opponent(&board);
+        warn!("Piece choose = {}", ai_piece);
     }
 
     #[test]
@@ -197,7 +348,8 @@ mod tests {
 
         info!("{}", board);
 
-        let best_first_move = MinMax::calc_move(&board, 3, true, Some(Piece::from("DEXS"))).unwrap();
+        let mut minmax = MinMax::new(3, true);
+        let best_first_move = minmax.calc_move(&board, Some(Piece::from("DEXS"))).unwrap();
         // let best_first_move = calc_move(&board, 2, true, None).unwrap();
         info!("best move = ({})", best_first_move);
 
@@ -209,7 +361,8 @@ mod tests {
 
         info!("{}", board);
 
-        let piece_to_give = MinMax::choose_piece_for_opponent(&board, 2);
+        minmax.set_depth(2);
+        let piece_to_give = minmax.choose_piece_for_opponent(&board);
         info!("I give the player this piece = {}", piece_to_give);
         // info!("{}", board);
         //

@@ -1,7 +1,7 @@
 use std::fmt::Display;
 
 use crate::{
-    ai::{self, Strategy},
+    ai::{self, Strategy, adequat_strategy},
     board::{Board, BoardIndex, Cell},
     error::ErrorGame,
     piece::Piece,
@@ -111,11 +111,11 @@ impl Player for AI {
     }
 
     fn choose_move(&self, piece: Piece, board: &Board) -> Result<Move, ErrorGame> {
-        ai::MinMax::calc_move(board, 2, true, Some(piece))
+        adequat_strategy(&board).calc_move(board, Some(piece))
     }
 
     fn choose_piece_for_opponent(&self, board: &Board) -> Piece {
-        ai::MinMax::choose_piece_for_opponent(board, 2).to_owned()
+        adequat_strategy(&board).choose_piece_for_opponent(board)
     }
 }
 

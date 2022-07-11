@@ -27,3 +27,29 @@ impl Strategy for RandomAI {
             .unwrap()
     }
 }
+
+
+#[cfg(test)]
+mod tests {
+    use crate::ai::Board;
+use crate::ai::Strategy;
+use super::RandomAI;
+
+
+    /// That's not easy to test random function, but let's check we got no errors
+    #[test]
+    fn test_calc_move_random() {
+        let board = Board::create();
+
+        let move_result = RandomAI::calc_move(&board, 0, true, None);
+
+        assert!(move_result.is_ok());
+    }
+
+    #[test]
+    fn test_choose_piece_for_opponent_random() {
+        let board = Board::create();
+        RandomAI::choose_piece_for_opponent(&board, 0);
+        // Just to check nothing panic
+    }
+}

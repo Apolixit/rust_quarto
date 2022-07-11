@@ -288,11 +288,11 @@ impl Piece {
 
 impl BoardIndex for Piece {
     fn from_index(board: &Board, index: usize) -> Result<Piece, ErrorGame> {
-        board
+        Ok(board
             .get_available_pieces()
             .get(&index)
-            .ok_or(ErrorGame::PieceDoesNotBelongPlayable)
-            .cloned()
+            .ok_or(ErrorGame::PieceDoesNotBelongPlayable)?
+            .to_owned())
     }
 
     fn to_index(&self, board: &Board) -> Result<usize, ErrorGame> {
@@ -347,7 +347,7 @@ impl From<[char; 4]> for Piece {
 }
 #[cfg(test)]
 mod tests {
-    use crate::{board::Cell, error};
+    use crate::{board::Cell};
 
     use super::*;
 

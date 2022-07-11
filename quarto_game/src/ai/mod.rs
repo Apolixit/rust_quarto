@@ -1,11 +1,15 @@
 pub use minmax::MinMax;
 pub use score::Score;
 
-use crate::{board::Board, error::ErrorGame, piece::Piece, r#move::Move};
+use crate::{board::{Board, WIDTH_BOARD, HEIGHT_BOARD}, error::ErrorGame, piece::Piece, r#move::Move};
+
+use self::random::RandomAI;
 
 mod minmax;
 mod score;
 pub mod random;
+
+const NB_PLAY_WITH_RANDOM_STRATEGY: usize = 3;
 
 pub trait Strategy {
     /// Return the best play from :
@@ -41,3 +45,4 @@ fn get_moves(board: &Board, piece: Option<Piece>) -> Vec<Move> {
         board.get_available_moves()
     }
 }
+

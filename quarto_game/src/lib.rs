@@ -23,5 +23,6 @@ cfg_if! {
 }
 
 pub fn init() {
+    //$env:RUST_LOG="debug"
     init_log();
 }

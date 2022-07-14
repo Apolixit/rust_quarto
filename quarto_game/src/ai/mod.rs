@@ -13,6 +13,7 @@ use self::random::RandomAI;
 mod minmax;
 pub mod random;
 mod score;
+pub mod minmax_tree;
 
 /// The nb move with RandomUI strategy. After this, we will use MinMax algorithm
 const NB_PLAY_WITH_RANDOM_STRATEGY: usize = 3;
@@ -24,7 +25,7 @@ pub trait Strategy {
     /// - the depth of the the search moves
     /// - Do we currently maximize the score ?
     /// - The piece to be played (it's specific to Quarto)
-    fn calc_move(&self, board: &Board, piece: Option<Piece>) -> Result<Move, ErrorGame>;
+    fn calc_move(&mut self, board: &Board, piece: Option<Piece>) -> Result<Move, ErrorGame>;
 
     /// Chose the worst piece for the opponent
     fn choose_piece_for_opponent(&self, board: &Board) -> Piece;
@@ -105,5 +106,10 @@ use crate::ai::adequat_strategy;
         trace!("Mid game strategy = {:?}", strategy.name());
 
         assert_eq!(strategy.name(), MinMax::name());
+    }
+
+    #[test]
+    fn test_adequat_thinking_strategy() {
+        // Check if the strategy doesn't take too long during the game
     }
 }

@@ -28,7 +28,7 @@ impl Strategy for RandomAI {
     }
 
     fn calc_move(
-        &self,
+        &mut self,
         board: &Board,
         piece: Option<Piece>,
     ) -> Result<Move, ErrorGame> {

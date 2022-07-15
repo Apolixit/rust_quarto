@@ -20,8 +20,8 @@ use super::Strategy;
 
 /// The MinMax struct
 pub struct MinMax {
-    depth: usize,
-    maximise: bool,
+    pub depth: usize,
+    pub maximise: bool,
 }
 
 impl MinMax {
@@ -42,7 +42,7 @@ impl MinMax {
     }
 
     /// Basic MinMax algorithm with just tracking score of each node
-    fn minmax(board: &Board, depth: usize, maximise: bool, available_moves: &Vec<Move>) -> Score {
+    pub fn minmax(board: &Board, depth: usize, maximise: bool, available_moves: &Vec<Move>) -> Score {
         if depth == 0 || !board.can_play_another_turn() {
             let score = Score::calc_score(board);
             debug!("MinMax depth = 0, score = {:?}", score);
@@ -160,7 +160,7 @@ impl Strategy for MinMax {
         })
     }
 
-    fn choose_piece_for_opponent(&self, board: &Board) -> Piece {
+    fn choose_piece_for_opponent(&mut self, board: &Board) -> Piece {
         let moves_score_result = MinMax::calc_next_moves_score(board, self.depth, true, None);
 
         let mut best_move_per_piece: HashMap<usize, Score> = HashMap::new();
@@ -234,7 +234,7 @@ mod tests {
         board
     }
 
-    
+
 
     #[test]
     fn test_minmax_tree() {
@@ -250,7 +250,7 @@ mod tests {
 
         let piece_to_play = Piece::from_index(&board, 1).unwrap();
 
-        let minmax = MinMax::new(4, true);
+        let mut minmax = MinMax::new(3, true);
         let best_minmax_score = MinMax::minmax(
             &board,
             minmax.depth,
@@ -304,7 +304,7 @@ mod tests {
             board.remove(piece_current).unwrap();
         }
 
-        let minmax = MinMax::new(1, true);
+        let mut minmax = MinMax::new(1, true);
         let best_first_move = minmax.calc_move(&board, None).unwrap();
         assert_eq!(best_first_move, winning_move);
     }
@@ -328,7 +328,7 @@ mod tests {
         }
 
         warn!("{}", board);
-        let minmax = MinMax::new(2, true);
+        let mut minmax = MinMax::new(2, true);
         let ai_piece = minmax.choose_piece_for_opponent(&board);
         warn!("Piece choose = {}", ai_piece);
     }

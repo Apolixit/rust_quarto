@@ -38,7 +38,7 @@ impl Strategy for RandomAI {
             .ok_or(ErrorGame::NoBestMove)?)
     }
 
-    fn choose_piece_for_opponent(&self, board: &Board) -> Piece {
+    fn choose_piece_for_opponent(&mut self, board: &Board) -> Piece {
         let pieces = board.get_available_pieces();
         *pieces
             .get(&rand::thread_rng().gen_range(0..pieces.len()))

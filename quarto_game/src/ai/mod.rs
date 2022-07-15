@@ -28,7 +28,7 @@ pub trait Strategy {
     fn calc_move(&mut self, board: &Board, piece: Option<Piece>) -> Result<Move, ErrorGame>;
 
     /// Chose the worst piece for the opponent
-    fn choose_piece_for_opponent(&self, board: &Board) -> Piece;
+    fn choose_piece_for_opponent(&mut self, board: &Board) -> Piece;
 }
 
 /// Play the current move (eq to Game struct)

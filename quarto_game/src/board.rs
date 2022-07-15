@@ -323,7 +323,7 @@ impl Board {
         available_next_move
     }
 
-    /// Return the list of the immediate available move from the current board
+    /// Return the list of the immediate available move from the current board and the piece
     pub fn get_available_moves_from_piece(&self, piece: Piece) -> Vec<Move> {
         self.get_empty_cells()
             .into_iter()

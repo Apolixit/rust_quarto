@@ -1,4 +1,5 @@
 use core::cmp::Ordering;
+use std::fmt::Display;
 use crate::board::Board;
 use crate::board::Cell;
 use crate::board::HEIGHT_BOARD;
@@ -155,6 +156,20 @@ impl Default for Score {
     }
 }
 
+impl Display for Score {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let s_val = match self {
+            Self::Point(val) => {
+                format!("{} points", val)
+            },
+            Self::Win => {
+                "Winning board !".to_string()
+            },
+        };
+        write!(f, "{}", s_val)
+    }
+}
+
 impl PartialOrd for Score {
 
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
@@ -207,7 +222,7 @@ mod tests {
 
         for (piece_current, score_current, cell_index) in moves {
             let cell = Cell::from_index(&board, cell_index).unwrap();
-            
+
             board.play(piece_current, cell).unwrap();
             board.remove(piece_current).unwrap();
 

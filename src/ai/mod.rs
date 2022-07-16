@@ -138,6 +138,7 @@ mod tests {
                 );
                 assert!(false);
             }
+            info!("Round {}, selected_piece for opponent = {}", i, selected_piece);
 
             now = Instant::now();
             let selected_move = ai.calc_move(&board, Some(selected_piece)).unwrap();
@@ -150,6 +151,7 @@ mod tests {
                 );
                 assert!(false);
             }
+            info!("Round {}, best move from piece {} = {}", i, selected_piece, selected_move);
 
             board.play_and_remove_piece(&selected_move).unwrap();
 

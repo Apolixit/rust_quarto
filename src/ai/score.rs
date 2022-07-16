@@ -207,7 +207,7 @@ impl Ord for Score {
 
 #[cfg(test)]
 mod tests {
-    use crate::{board::{Board, Cell}, piece::Piece, r#move::Move};
+    use crate::{board::{Board, Cell}, piece::Piece};
 
     use super::Score;
 

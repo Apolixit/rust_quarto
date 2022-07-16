@@ -300,10 +300,10 @@ impl Strategy for MinMaxTree {
                 .or_insert(minmax.score);
         }
 
-        trace!("best_move_per_piece = {:?}", best_move_per_piece);
+        debug!("best_move_per_piece = {:?}", best_move_per_piece);
         let worst_score = best_move_per_piece.into_iter().min_by_key(|k| k.1).unwrap();
         let piece = Piece::from_index(&board, worst_score.0).unwrap();
-        trace!("worst_score = {} which is piece = {}", worst_score.1, piece);
+        debug!("worst_score = {} which is piece = {}", worst_score.1, piece);
 
         piece
     }
@@ -313,7 +313,7 @@ impl Strategy for MinMaxTree {
 mod tests {
     use crate::{
         ai::{minmax_tree::MinMaxTree, Score, Strategy},
-        board::{Board, BoardIndex, Cell},
+        board::{Board, BoardIndex, Cell, BoardState},
         piece::Piece,
         r#move::Move,
     };
@@ -458,35 +458,29 @@ mod tests {
     #[test]
     fn test_debug_2() {
         let mut board = Board::create();
+        board.with_scenario(vec![
+            Move::new(Piece::from("WFXS"), Cell::from_index(&board, 5).unwrap()),
+            Move::new(Piece::from("WFTS"), Cell::from_index(&board, 6).unwrap()),
+            Move::new(Piece::from("DEXC"), Cell::from_index(&board, 9).unwrap()),
+            Move::new(Piece::from("WETS"), Cell::from_index(&board, 10).unwrap()),
+            Move::new(Piece::from("WETC"), Cell::from_index(&board, 11).unwrap()),
+            Move::new(Piece::from("DEXS"), Cell::from_index(&board, 12).unwrap()),
+            Move::new(Piece::from("DFXC"), Cell::from_index(&board, 13).unwrap()),
+            Move::new(Piece::from("DFTC"), Cell::from_index(&board, 14).unwrap()),
+            Move::new(Piece::from("WFXC"), Cell::from_index(&board, 15).unwrap()),
+        ]);
 
-        board
-            .play_and_remove_piece(&Move::new(
-                Piece::from("DFTS"),
-                Cell::from_index(&board, 0).unwrap(),
-            ))
-            .unwrap();
-        board
-            .play_and_remove_piece(&Move::new(
-                Piece::from("WETS"),
-                Cell::from_index(&board, 1).unwrap(),
-            ))
-            .unwrap();
-        board
-            .play_and_remove_piece(&Move::new(
-                Piece::from("WFTC"),
-                Cell::from_index(&board, 2).unwrap(),
-            ))
-            .unwrap();
+        info!("{}", board);
 
-        debug!("{}", board);
-
-        let mut algo = MinMaxTree::new(2, true);
+        let mut algo = MinMaxTree::new(1, true);
         // algo.minmax(&board);
         // info!("{}", algo.as_tree(false));
-        let piece_opponent = algo.choose_piece_for_opponent(&board); //Piece::from("WEXC");
-        debug!("piece_opponent = {}", piece_opponent);
+        let piece_opponent = algo.choose_piece_for_opponent(&board);
+        info!("piece_opponent = {}", piece_opponent);
 
         let selected_move = algo.calc_move(&board, Some(piece_opponent)).unwrap();
-        debug!("{:?} / {}", selected_move, selected_move);
+        info!("Play {} like this {}", selected_move.piece(), selected_move);
+        board.play(selected_move.piece(), selected_move.cell()).unwrap();
+        info!("Status {:?}", board.board_state())
     }
 }

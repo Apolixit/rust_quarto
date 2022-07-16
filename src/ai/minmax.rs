@@ -208,7 +208,7 @@ mod tests {
         ];
 
         let mut nb_piece_left = nb_piece_left;
-        while (nb_piece_left > 0) {
+        while nb_piece_left > 0 {
             pieces.remove(pieces.len() - 1);
             nb_piece_left -= 1;
         }

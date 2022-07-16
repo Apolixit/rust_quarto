@@ -125,6 +125,15 @@ impl Board {
         }
     }
 
+    #[cfg(test)]
+    pub fn with_scenario(&mut self, scenario: Vec<Move>) {
+        scenario.into_iter().for_each(|m| {
+            self
+            .play_and_remove_piece(&m)
+            .unwrap();
+        });
+    }
+
     /// Can we play an other turn ?
     pub fn can_play_another_turn(&self) -> bool {
         self.get_available_pieces().len() > 0
@@ -690,13 +699,13 @@ mod tests {
 
         //Now we remove each piece from available pool of piece
         assert_eq!(p1.to_index(&board).unwrap(), 8);
-        board.remove(Piece::from_index(&board, 8).unwrap());
+        board.remove(Piece::from_index(&board, 8).unwrap()).unwrap();
         assert_eq!(p2.to_index(&board).unwrap(), 9);
-        board.remove(Piece::from_index(&board, 9).unwrap());
+        board.remove(Piece::from_index(&board, 9).unwrap()).unwrap();
         assert_eq!(p3.to_index(&board).unwrap(), 10);
-        board.remove(Piece::from_index(&board, 10).unwrap());
+        board.remove(Piece::from_index(&board, 10).unwrap()).unwrap();
         assert_eq!(p4.to_index(&board).unwrap(), 11);
-        board.remove(Piece::from_index(&board, 11).unwrap());
+        board.remove(Piece::from_index(&board, 11).unwrap()).unwrap();
     }
 
     #[test]

@@ -1,12 +1,8 @@
 use std::cmp::Ordering;
 use std::collections::HashMap;
-use std::fmt::format;
 use std::fmt::Debug;
 use std::fmt::Display;
-use termtree::Tree;
-
 use crate::ai::get_moves;
-use crate::ai::play;
 use crate::ai::Board;
 use crate::ai::ErrorGame;
 use crate::ai::Piece;
@@ -74,11 +70,15 @@ impl Display for MinMaxTree {
 }
 
 impl MinMaxTree {
+    pub fn name() -> String {
+        String::from("MinMaxTree")
+    }
+
     /// Create a new MinMaxTree
-    fn new(c_move: Option<Move>, depth: usize, maximise: bool) -> MinMaxTree {
+    pub fn new(depth: usize, maximise: bool) -> MinMaxTree {
         MinMaxTree {
             piece: None,
-            selected_move: c_move,
+            selected_move: None,
             score: if maximise {
                 Score::Point(usize::MIN)
             } else {
@@ -90,20 +90,46 @@ impl MinMaxTree {
         }
     }
 
+    /// Create a new MinMaxTree with a predefined move
+    pub fn from_move(c_move: Move, depth: usize, maximise: bool) -> MinMaxTree {
+        MinMaxTree {
+            piece: None,
+            selected_move: Some(c_move),
+            score: if maximise {
+                Score::Point(usize::MIN)
+            } else {
+                Score::Win
+            },
+            depth: depth,
+            maximise: maximise,
+            children: vec![],
+        }
+    }
+
+    /// Reset the algo
+    fn reset(&mut self) {
+        if self.children.len() > 0 {
+            *self = MinMaxTree::new(self.depth, self.maximise);
+        }
+    }
+
     #[cfg(test)]
     fn is_leaf(&self) -> bool {
         self.children.len() == 0
     }
 
-    /// Get the adequat move from the immediate children
+    /// Get the adequat move from immediate children
     fn update_move_from_first_child(&mut self) {
         if self.selected_move.is_none() {
-            self.selected_move = (*self.children)
-                .into_iter()
-                .find(|f| f.score == self.score)
-                .unwrap()
-                .selected_move
-                .clone();
+            trace!("No selected move, we want to find score = {}", self.score);
+            for child in &self.children {
+                trace!("update_move_from_first_child >> child score = {} / child move = {:?} / child depth = {}", child.score, child.selected_move, child.depth);
+                if child.score == self.score {
+                    self.selected_move = child.selected_move;
+                }
+            }
+
+            trace!("I have selected = {:?} with score = {}", self.selected_move, self.score);
         }
     }
 
@@ -112,6 +138,7 @@ impl MinMaxTree {
         get_moves(board, self.piece)
     }
 
+    /// Force to calc a move from a specific piece
     #[cfg(test)]
     fn with_piece(mut self, piece: Piece) -> MinMaxTree {
         self.piece = Some(piece);
@@ -134,12 +161,14 @@ impl MinMaxTree {
         } else {
             // Loop over each child node
             self.children_moves(&board).into_iter().for_each(|m| {
-                let mut child = MinMaxTree::new(Some(m), self.depth - 1, !self.maximise);
+                let mut child = MinMaxTree::from_move(m, self.depth - 1, !self.maximise);
                 let previous_score = self.score; // Just for further logging
 
                 // We play the current move
                 let mut board = board.clone();
-                play(&mut board, &child.selected_move.unwrap());
+                board
+                    .play_and_remove_piece(&child.selected_move.unwrap())
+                    .unwrap();
 
                 // Call minmax recursivity on each children
                 child.minmax(&board);
@@ -163,6 +192,8 @@ impl MinMaxTree {
                     previous_score,
                     self.score
                 );
+
+                // Add the child
                 self.children.push(child);
             });
 
@@ -171,65 +202,120 @@ impl MinMaxTree {
                 self.depth, self.maximise, self.score, self.children,
             );
 
-            // We are here when the minmax has finished, we now need to update the move from children which is equal on the best score
-            self.update_move_from_first_child();
+            if self.selected_move.is_none() {
+                // We are here when the minmax has finished, we now need to update the move from children which is equal on the best score
+                self.update_move_from_first_child();
+            }
         }
     }
 
     /// Display the MinMaxTree as a tree
     #[cfg(test)]
-    fn to_tree(&self) -> Tree<&MinMaxTree> {
+    fn as_tree(&self, display_leaf: bool) -> termtree::Tree<&MinMaxTree> {
+        use termtree::Tree;
+
         let x = self.children.as_slice();
         let tree: Tree<&MinMaxTree> = x.into_iter().fold(Tree::new(self), |mut root, entry| {
-            if entry.is_leaf() {
-                root.push(Tree::new(entry));
+            if display_leaf {
+                if entry.is_leaf() {
+                    root.push(Tree::new(entry));
+                } else {
+                    root.push(entry.as_tree(display_leaf));
+                }
             } else {
-                root.push(entry.to_tree());
+                if entry.children.first().unwrap().depth > 0 {
+                    root.push(entry.as_tree(display_leaf));
+                } else {
+                    root.push(Tree::new(entry));
+                }
             }
+
             root
         });
         tree
+    }
+
+    /// The combinaison (nb_piece_already_played, depth to search)
+    /// For example here:
+    ///     - between 0 and 5 pieces, we search with depth = 2
+    ///     - between 5 and 8 pieces, we search with depth = 3
+    ///     - etc
+    /// I try this to have a better algo in end game
+    pub fn calc_adequat_depth(nb_piece_left: usize) -> usize {
+        match nb_piece_left {
+            0..=8 => 2,
+            9..=10 => 3,
+            11..=15 => 4,
+            _ => 0,
+        }
+    }
+
+    pub fn depth(&self) -> usize {
+        self.depth
     }
 }
 
 impl Strategy for MinMaxTree {
     fn name(&self) -> String {
-        String::from("MinMaxTree")
+        MinMaxTree::name()
     }
 
     fn calc_move(&mut self, board: &Board, piece: Option<Piece>) -> Result<Move, ErrorGame> {
+        self.reset();
+
         if piece.is_some() {
             self.piece = Some(piece.unwrap());
         }
 
         self.minmax(board);
-        Ok(self.selected_move.unwrap())
+
+        let selected_move = self.selected_move.unwrap();
+
+        // if we passed a piece in parameter, the move selected by minmax should play this piece
+        if piece.is_some() {
+            assert_eq!(piece.unwrap(), selected_move.piece());
+        }
+        Ok(selected_move)
     }
 
     fn choose_piece_for_opponent(&mut self, board: &Board) -> Piece {
+        self.reset();
+
+        // self.maximise = false;
         self.minmax(board);
 
         // Visit of the children to select the worst move
         let mut best_move_per_piece: HashMap<usize, Score> = HashMap::new();
         for minmax in &self.children {
             best_move_per_piece
-                .entry(minmax.selected_move.unwrap().piece().to_index(board).unwrap())
+                .entry(
+                    minmax
+                        .selected_move
+                        .unwrap()
+                        .piece()
+                        .to_index(board)
+                        .unwrap(),
+                )
                 .and_modify(|score| *score = max(*score, minmax.score))
                 .or_insert(minmax.score);
         }
 
-        info!("best_move_per_piece = {:?}", best_move_per_piece);
+        trace!("best_move_per_piece = {:?}", best_move_per_piece);
         let worst_score = best_move_per_piece.into_iter().min_by_key(|k| k.1).unwrap();
-        Piece::from_index(&board, worst_score.0).unwrap()
+        let piece = Piece::from_index(&board, worst_score.0).unwrap();
+        trace!("worst_score = {} which is piece = {}", worst_score.1, piece);
+
+        piece
     }
 }
 
 #[cfg(test)]
 mod tests {
     use crate::{
-        ai::{get_moves, minmax_tree::MinMaxTree, MinMax, Score, Strategy},
+        ai::{minmax_tree::MinMaxTree, Score, Strategy},
         board::{Board, BoardIndex, Cell},
         piece::Piece,
+        r#move::Move,
     };
 
     fn late_game(nb_piece_left: usize) -> Vec<Piece> {
@@ -253,7 +339,7 @@ mod tests {
         ];
 
         let mut nb_piece_left = nb_piece_left;
-        while (nb_piece_left > 0) {
+        while nb_piece_left > 0 {
             pieces.remove(pieces.len() - 1);
             nb_piece_left -= 1;
         }
@@ -283,44 +369,124 @@ mod tests {
         let depth: usize = 2;
         let nb_piece_left = 6;
         let board = fill_board(nb_piece_left);
-        warn!("{}", board);
+        debug!("{}", board);
 
         let piece_to_play = Piece::from_index(&board, 1).unwrap();
-        info!("Should play : {}", &piece_to_play);
+        debug!("Should play : {}", &piece_to_play);
         // Tree minmax
-        let mut minmax_tree = MinMaxTree::new(None, depth, true).with_piece(piece_to_play);
+        let mut minmax_tree = MinMaxTree::new(depth, true).with_piece(piece_to_play.clone());
         minmax_tree.minmax(&board);
 
-        info!(
+        let selected_move = minmax_tree.selected_move.unwrap();
+        debug!(
             "minmax best move = {} give score {}",
-            minmax_tree.selected_move.unwrap(),
+            selected_move,
             minmax_tree.score
         );
-        info!("MinMax tree result =  \n{}", minmax_tree.to_tree());
+
+        assert_eq!(minmax_tree.calc_move(&board, Some(piece_to_play)).unwrap(), selected_move);
+
+        debug!("MinMax tree result =  \n{}", minmax_tree.as_tree(true));
     }
-
-
 
     #[test]
     fn test_minmax_tree_choose_opponent_piece() {
         let depth: usize = 2;
         let nb_piece_left = 10;
         let board = fill_board(nb_piece_left);
-        warn!("{}", board);
+        debug!("{}", board);
 
         // Tree minmax
-        let mut minmax_tree = MinMaxTree::new(None, depth, true);
+        let mut minmax_tree = MinMaxTree::new(depth, true);
         let piece = minmax_tree.choose_piece_for_opponent(&board);
 
-        info!("Piece choose = {}", piece);
+        debug!("Piece choose = {}", piece);
     }
 
     #[test]
     fn test_depth_0_eq_current_board_score() {
         let board = fill_board(5);
-        let mut minmax = MinMaxTree::new(None, 0, true);
+        let mut minmax = MinMaxTree::new(0, true);
         minmax.minmax(&board);
 
         assert_eq!(Score::calc_score(&board), minmax.score);
+    }
+
+    #[test]
+    fn test_debug() {
+        let mut board = Board::create();
+
+        board
+            .play_and_remove_piece(&Move::new(
+                Piece::from("WETS"),
+                Cell::from_index(&board, 2).unwrap(),
+            ))
+            .unwrap();
+        board
+            .play_and_remove_piece(&Move::new(
+                Piece::from("DEXC"),
+                Cell::from_index(&board, 5).unwrap(),
+            ))
+            .unwrap();
+        board
+            .play_and_remove_piece(&Move::new(
+                Piece::from("DFTS"),
+                Cell::from_index(&board, 7).unwrap(),
+            ))
+            .unwrap();
+
+            debug!("{}", board);
+
+        let mut algo = MinMaxTree::new(2, true);
+        algo.minmax(&board);
+        //info!("{}", algo.as_tree());
+        let piece_opponent = algo.choose_piece_for_opponent(&board);
+        debug!("piece_opponent = {}", piece_opponent);
+        let worst_score = Score::Point(5);
+        for m in board.get_available_moves_from_piece(piece_opponent) {
+            let mut board_clone = board.clone();
+            board_clone.play_and_remove_piece(&m).unwrap();
+            let current_score = Score::calc_score(&board_clone);
+            debug!(
+                "Score board = {} / Worst score (choose_piece_for_opponent) = {}",
+                current_score, worst_score
+            );
+            assert!(current_score <= worst_score);
+        }
+    }
+
+    #[test]
+    fn test_debug_2() {
+        let mut board = Board::create();
+
+        board
+            .play_and_remove_piece(&Move::new(
+                Piece::from("DFTS"),
+                Cell::from_index(&board, 0).unwrap(),
+            ))
+            .unwrap();
+        board
+            .play_and_remove_piece(&Move::new(
+                Piece::from("WETS"),
+                Cell::from_index(&board, 1).unwrap(),
+            ))
+            .unwrap();
+        board
+            .play_and_remove_piece(&Move::new(
+                Piece::from("WFTC"),
+                Cell::from_index(&board, 2).unwrap(),
+            ))
+            .unwrap();
+
+        debug!("{}", board);
+
+        let mut algo = MinMaxTree::new(2, true);
+        // algo.minmax(&board);
+        // info!("{}", algo.as_tree(false));
+        let piece_opponent = algo.choose_piece_for_opponent(&board); //Piece::from("WEXC");
+        debug!("piece_opponent = {}", piece_opponent);
+
+        let selected_move = algo.calc_move(&board, Some(piece_opponent)).unwrap();
+        debug!("{:?} / {}", selected_move, selected_move);
     }
 }

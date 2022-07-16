@@ -1,12 +1,10 @@
-use crate::{error::ErrorGame, piece};
+use crate::{error::ErrorGame};
 use ansi_term::Style;
 use enum_iterator::IntoEnumIterator;
-use log::error;
 use std::{
     collections::BTreeMap,
     fmt::Display,
     ops::{Index, IndexMut},
-    panic,
 };
 
 use prettytable::{Cell as pCell, Row as pRow, Table as pTable};
@@ -18,9 +16,12 @@ pub const WIDTH_BOARD: usize = 4;
 pub const HEIGHT_BOARD: usize = 4;
 
 pub trait BoardIndex {
+    /// Create the trait from specified index
     fn from_index(board: &Board, index: usize) -> Result<Self, ErrorGame>
     where
         Self: Sized;
+
+    /// Return the index from the struct
     fn to_index(&self, board: &Board) -> Result<usize, ErrorGame>;
 }
 
@@ -41,6 +42,7 @@ pub enum BoardState {
 pub struct Board {
     /// The x16 cells of the board
     cells: BTreeMap<usize, Cell>,
+
     /// Pieces which has not been played yet
     available_pieces: BTreeMap<usize, Piece>,
 }
@@ -63,6 +65,7 @@ impl Board {
             }
         }
 
+        assert_eq!(pieces.len(), WIDTH_BOARD * HEIGHT_BOARD);
         trace!("All pieces have been generated");
         pieces
     }
@@ -70,14 +73,12 @@ impl Board {
     /// Create the board with (WIDTH_BOARD * HEIGHT_BOARD) empty cells
     fn generate_all_cells() -> BTreeMap<usize, Cell> {
         let mut cells = BTreeMap::new();
-        let mut key: usize = 0;
 
         for i in 0..WIDTH_BOARD * HEIGHT_BOARD {
-            cells.insert(key, Cell::new(i).unwrap());
-
-            key += 1;
+            cells.insert(i, Cell::new(i).unwrap());
         }
 
+        assert_eq!(cells.len(), WIDTH_BOARD * HEIGHT_BOARD);
         trace!("All cells have been generated");
         cells
     }
@@ -90,6 +91,7 @@ impl Board {
         Ok(y * HEIGHT_BOARD + x)
     }
 
+    /// Return (x; y) coordinate from index
     pub fn index_to_coordinate(index: usize) -> Result<(usize, usize), ErrorGame> {
         if index >= WIDTH_BOARD * HEIGHT_BOARD {
             return Err(ErrorGame::IndexOutOfBound);
@@ -97,6 +99,7 @@ impl Board {
         Ok((index % WIDTH_BOARD, index / HEIGHT_BOARD))
     }
 
+    /// Return the (top left to bottom right) (top right to bottom left) list of cells
     pub fn get_diagonal_cells(board: &Board) -> (Vec<Cell>, Vec<Cell>) {
         let mut diagonal_cells_top_left_bottom_right: Vec<Cell> = vec![];
         let mut diagonal_cells_top_right_bottom_left: Vec<Cell> = vec![];
@@ -134,24 +137,9 @@ impl Board {
         if !self.can_play_another_turn() {
             return Err(ErrorGame::PieceDoesNotBelongPlayable);
         }
-        // if !self.cells.contains_key(&cell_index) {
-        //     error!("Try to play in cell num {} - out of bound", cell_index);
-        //     return Err(ErrorGame::IndexOutOfBound);
-        // }
-
-        // let piece = self
-        //     .available_pieces
-        //     .get(&piece_index)
-        //     .ok_or(ErrorGame::PieceDoesNotBelongPlayable)?;
 
         let cell_before_playing = cell;
-        // trace!(
-        //     "Cell (i = {}) before playing : {}",
-        //     cell.to_index(),
-        //     cell
-        // );
 
-        // let cell = self.cells.get(&cell_index).unwrap();
         if let Some(piece) = cell.piece {
             return Err(ErrorGame::CellIsNotEmpty(cell, piece));
         }
@@ -181,6 +169,12 @@ impl Board {
             .ok_or(ErrorGame::PieceDoesNotExists)
     }
 
+    /// The combination of the two previous functions
+    pub fn play_and_remove_piece(&mut self, m: &Move) -> Result<Piece, ErrorGame> {
+        self.play(m.piece(), m.cell())?;
+        Ok(self.remove(m.piece())?)
+    }
+
     /// Get the list of available piece that can be played
     pub fn get_available_pieces(&self) -> BTreeMap<usize, Piece> {
         self.available_pieces.clone()
@@ -193,25 +187,9 @@ impl Board {
             .ok_or(ErrorGame::PieceDoesNotBelongPlayable)
     }
 
-    /// Get the piece index
-    // pub fn get_piece_index(&self, piece: &Piece) -> Result<usize, ErrorGame> {
-    //     self.get_available_pieces()
-    //         .into_iter()
-    //         .find_map(|(i, p)| if &p == piece { Some(i) } else { None })
-    //         .ok_or(ErrorGame::PieceDoesNotBelongPlayable)
-    // }
-
     pub fn get_cells(&self) -> &BTreeMap<usize, Cell> {
         &self.cells
     }
-
-    // pub fn get_cells_from_position(&self, x: usize, y: usize) -> Cell {
-    //     *self.cells.get(&Board::get_index(x, y).unwrap()).unwrap()
-    // }
-
-    // pub fn get_cells_from_position(&self, x: usize, y: usize) -> Cell {
-    //     *self.cells.get(&Board::get_index(x, y).unwrap()).unwrap()
-    // }
 
     /// Return the empty cells available in the board
     pub fn get_empty_cells(&self) -> BTreeMap<usize, Cell> {
@@ -229,7 +207,6 @@ impl Board {
         //Horizontal check
         for i in 0..WIDTH_BOARD {
             let mut horizontal_cells: Vec<Cell> = Vec::with_capacity(HEIGHT_BOARD);
-            let mut vertical_cells: Vec<Cell> = Vec::with_capacity(HEIGHT_BOARD);
             'y_x: for j in 0..HEIGHT_BOARD {
                 //If the cell is empty -> break this loop iteration
                 let current_cell = Cell::from_coordinate(&self, j, i).unwrap();
@@ -298,6 +275,7 @@ impl Board {
             .collect()
     }
 
+    /// Return if the current cells are a winning position
     pub fn check_cell_is_winning(cells: &mut Vec<Cell>) -> bool {
         if !cells.into_iter().all(|f| f.piece.is_some()) {
             trace!("check_cell_is_winning : some cells are empty");
@@ -323,7 +301,7 @@ impl Board {
         available_next_move
     }
 
-    /// Return the list of the immediate available move from the current board and the piece
+    /// Return the list of the immediate available move from the current board
     pub fn get_available_moves_from_piece(&self, piece: Piece) -> Vec<Move> {
         self.get_empty_cells()
             .into_iter()
@@ -332,25 +310,19 @@ impl Board {
     }
 }
 
-// Give access to cells directly from Board
+/// Give access to cells directly from Board (board[0], board[10])
 impl Index<usize> for Board {
     type Output = Cell;
 
     fn index(&self, index: usize) -> &Self::Output {
-        if index > WIDTH_BOARD * HEIGHT_BOARD {
-            panic!("Index out of bounds");
-        }
-
+        assert!(index <= WIDTH_BOARD * HEIGHT_BOARD, "Index out of bounds");
         self.cells.get(&index).unwrap()
     }
 }
 
 impl IndexMut<usize> for Board {
     fn index_mut(&mut self, index: usize) -> &mut Self::Output {
-        if index > WIDTH_BOARD * HEIGHT_BOARD {
-            panic!("Index out of bounds");
-        }
-
+        assert!(index <= WIDTH_BOARD * HEIGHT_BOARD, "Index out of bounds");
         self.cells.get_mut(&index).unwrap()
     }
 }
@@ -415,9 +387,7 @@ impl Display for Board {
                 prettytable::format::Alignment::CENTER,
             );
             //If it's a winning cell, draw the background
-            //if cell.background_color == CellColor::Green {
             draw_cell.style(prettytable::Attr::ForegroundColor(2));
-            //}
 
             current_row.add_cell(draw_cell);
             if (i + 1) % WIDTH_BOARD == 0 {
@@ -434,11 +404,14 @@ impl Display for Board {
 pub struct Cell {
     /// Determine if a piece is present on the cell or not
     piece: Option<Piece>,
+    /// The horizontal index
     x: usize,
+    /// The vertical index
     y: usize,
 }
 
 impl Cell {
+    /// Create a new Cell
     pub fn new(index: usize) -> Result<Cell, ErrorGame> {
         let (x, y) = Board::index_to_coordinate(index)?;
         Ok(Cell { piece: None, x, y })
@@ -453,22 +426,17 @@ impl Cell {
     }
 
     pub fn from_index(board: &Board, index: usize) -> Result<Self, ErrorGame> {
-        // Ok(board[index])
-        Ok(
-            *board
+        Ok(*board
             .get_cells()
             .get(&index)
-            .ok_or(ErrorGame::IndexOutOfBound)?
-            )
+            .ok_or(ErrorGame::IndexOutOfBound)?)
     }
 
     pub fn from_coordinate(board: &Board, x: usize, y: usize) -> Result<Self, ErrorGame> {
-        // Ok(board[Board::get_index_from_coordinate(x, y).unwrap()])
         Ok(*board
             .get_cells()
             .get(&Board::coordinate_to_index(x, y)?)
-            .unwrap()
-            )
+            .unwrap())
     }
 
     pub fn piece(&self) -> Option<Piece> {
@@ -507,26 +475,52 @@ mod tests {
         assert_eq!(Board::coordinate_to_index(1, 2).unwrap(), 9);
         assert_eq!(Board::coordinate_to_index(0, 3).unwrap(), 12);
 
-        assert_eq!(Board::coordinate_to_index(4, 4), Err(ErrorGame::IndexOutOfBound));
+        assert_eq!(
+            Board::coordinate_to_index(4, 4),
+            Err(ErrorGame::IndexOutOfBound)
+        );
 
         assert_eq!(Cell::new(0).unwrap().to_index(), 0);
         assert_eq!(Cell::new(10).unwrap().to_index(), 10);
         assert_eq!(Cell::new(15).unwrap().to_index(), 15);
-
 
         assert_eq!(Board::index_to_coordinate(0).unwrap(), (0, 0));
         assert_eq!(Board::index_to_coordinate(1).unwrap(), (1, 0));
         assert_eq!(Board::index_to_coordinate(12).unwrap(), (0, 3));
         assert_eq!(Board::index_to_coordinate(10).unwrap(), (2, 2));
 
-        assert_eq!(Board::index_to_coordinate(20), Err(ErrorGame::IndexOutOfBound));
+        assert_eq!(
+            Board::index_to_coordinate(20),
+            Err(ErrorGame::IndexOutOfBound)
+        );
     }
 
     #[test]
     fn test_cell_manipulation() {
-        assert_eq!(Cell::new(0).unwrap(), Cell { piece : None, x: 0, y: 0 });
-        assert_eq!(Cell::new(10).unwrap(), Cell { piece : None, x: 2, y: 2 });
-        assert_eq!(Cell::new(15).unwrap(), Cell { piece : None, x: 3, y: 3 });
+        assert_eq!(
+            Cell::new(0).unwrap(),
+            Cell {
+                piece: None,
+                x: 0,
+                y: 0
+            }
+        );
+        assert_eq!(
+            Cell::new(10).unwrap(),
+            Cell {
+                piece: None,
+                x: 2,
+                y: 2
+            }
+        );
+        assert_eq!(
+            Cell::new(15).unwrap(),
+            Cell {
+                piece: None,
+                x: 3,
+                y: 3
+            }
+        );
 
         assert_eq!(Cell::new(20), Err(ErrorGame::IndexOutOfBound));
 
@@ -536,17 +530,43 @@ mod tests {
 
         let board = Board::create();
         let cell_2 = Cell::from_coordinate(&board, 0, 0).unwrap();
-        assert_eq!(cell_2, Cell { piece : None, x: 0, y: 0 });
+        assert_eq!(
+            cell_2,
+            Cell {
+                piece: None,
+                x: 0,
+                y: 0
+            }
+        );
         assert_eq!(cell_2.to_index(), 0);
 
-        assert_eq!(Cell::from_coordinate(&board, 20, 0), Err(ErrorGame::IndexOutOfBound));
-        assert_eq!(Cell::from_coordinate(&board, 0, 20), Err(ErrorGame::IndexOutOfBound));
-        assert_eq!(Cell::from_coordinate(&board, 20, 20), Err(ErrorGame::IndexOutOfBound));
+        assert_eq!(
+            Cell::from_coordinate(&board, 20, 0),
+            Err(ErrorGame::IndexOutOfBound)
+        );
+        assert_eq!(
+            Cell::from_coordinate(&board, 0, 20),
+            Err(ErrorGame::IndexOutOfBound)
+        );
+        assert_eq!(
+            Cell::from_coordinate(&board, 20, 20),
+            Err(ErrorGame::IndexOutOfBound)
+        );
 
-        assert_eq!(Cell::from_index(&board, 0).unwrap(), Cell { piece : None, x: 0, y: 0 });
+        assert_eq!(
+            Cell::from_index(&board, 0).unwrap(),
+            Cell {
+                piece: None,
+                x: 0,
+                y: 0
+            }
+        );
         assert_eq!(Cell::from_index(&board, 0).unwrap().to_coordinate(), (0, 0));
 
-        assert_eq!(Cell::from_index(&board, 20), Err(ErrorGame::IndexOutOfBound));
+        assert_eq!(
+            Cell::from_index(&board, 20),
+            Err(ErrorGame::IndexOutOfBound)
+        );
     }
 
     /// Quarto game has 16 piece
@@ -730,16 +750,18 @@ mod tests {
     #[test]
     fn test_is_board_winning_diagonal() {
         let mut board = Board::create();
-        let plays: Vec<(Piece, usize)> = vec![(Piece::from("DFXS"), 3), (Piece::from("DETS"), 6), (Piece::from("DEXS"), 9), (Piece::from("DETC"), 12)];
+        let plays: Vec<(Piece, usize)> = vec![
+            (Piece::from("DFXS"), 3),
+            (Piece::from("DETS"), 6),
+            (Piece::from("DEXS"), 9),
+            (Piece::from("DETC"), 12),
+        ];
         let mut btree_win: BTreeMap<usize, Cell> = BTreeMap::new();
 
         //Play the first piece in first cell of the board
         for play in &plays {
             board
-                .play(
-                    play.0,
-                    Cell::from_index(&board, play.1).unwrap(),
-                )
+                .play(play.0, Cell::from_index(&board, play.1).unwrap())
                 .unwrap();
         }
 
@@ -747,7 +769,7 @@ mod tests {
             btree_win.insert(play.1, *board.cells.get(&play.1).unwrap());
         }
 
-        warn!("{}", board);
+        debug!("{}", board);
         let maybe_cell_winning = board.board_state();
         assert_eq!(maybe_cell_winning, BoardState::Win(btree_win));
     }
@@ -834,7 +856,7 @@ mod tests {
             board.remove(piece).unwrap();
         }
 
-        warn!("{}", board);
+        debug!("{}", board);
 
         let maybe_cell_winning = board.board_state();
         assert_eq!(maybe_cell_winning, BoardState::Draw);

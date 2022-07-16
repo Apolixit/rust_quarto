@@ -1,10 +1,11 @@
 ## Rust Quarto game
 
-This is a simple Quarto game, currently playable in console.
+This is a Quarto game, currently playable in console.
 It provided all the basis functionnalities of the game.
+
+You can play Player vs Player or Player vs AI (minmax algorithm).
 
 Feel free to fork and customize :)
 
 ### What's Next ?
-I'm going to add the functionnality to play against an AI, with MinMax algorithm.
 The followings steps are going on WASM to improve UI

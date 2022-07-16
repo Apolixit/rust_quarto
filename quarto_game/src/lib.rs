@@ -1,5 +1,9 @@
-use cfg_if::cfg_if;
+//! # Quarto game
+//! This crate allow to play Player vs Player and Player vs AI (and also eventually AI vs AI, nothing in the code forbid that)
 
+
+
+use cfg_if::cfg_if;
 #[macro_use] extern crate log;
 
 pub mod game;
@@ -8,6 +12,9 @@ pub mod piece;
 pub mod error;
 pub mod ai;
 pub mod r#move;
+pub mod player;
+
+
 
 cfg_if! {
     if #[cfg(feature = "console_log")] {

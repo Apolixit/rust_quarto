@@ -1,11 +1,9 @@
-use crate::ai::play;
 use crate::board::Board;
 use crate::board::BoardIndex;
 use crate::error::ErrorGame;
 use crate::piece::Piece;
 use crate::r#move::Move;
 use std::cmp::max;
-use core::cmp::Ordering;
 use std::cmp::min;
 use std::collections::HashMap;
 
@@ -18,6 +16,7 @@ use super::Strategy;
 /// store value and to debug
 
 
+// #[deprecated = "Please use MinMaxTree implementation instead"]
 /// The MinMax struct
 pub struct MinMax {
     pub depth: usize,
@@ -57,7 +56,8 @@ impl MinMax {
             score = Score::Point(usize::MIN);
             for m in available_moves {
                 let mut board = board.clone();
-                play(&mut board, &m);
+                board.play_and_remove_piece(&m).unwrap();
+
                 let save_old_score = score;
                 score = max(
                     score,
@@ -71,7 +71,8 @@ impl MinMax {
             score = Score::Win;
             for m in available_moves {
                 let mut board = board.clone();
-                play(&mut board, &m);
+                board.play_and_remove_piece(&m).unwrap();
+
                 let save_old_score = score;
                 score = min(
                     score,
@@ -180,8 +181,6 @@ impl Strategy for MinMax {
 mod tests {
 
     use crate::ai::get_moves;
-    use crate::ai::minmax;
-    use crate::ai::play;
     use crate::ai::Score;
     use crate::ai::{MinMax, Strategy};
     use crate::board::{BoardIndex, Cell};
@@ -244,7 +243,7 @@ mod tests {
 
         // We have 3 pieces and cells which haven't been played, so we have 9 moves available
         // assert_eq!(board.get_available_moves().len(), 9);
-        warn!("{}", board);
+        debug!("{}", board);
         // info!("{:?}", Score::calc_score(&board));
         // info!("{:?}", board.board_state());
 
@@ -264,7 +263,7 @@ mod tests {
             .play(best_first_move.piece(), best_first_move.cell())
             .unwrap();
 
-        warn!("{}", board);
+        debug!("{}", board);
         info!("best_minmax_score = {:?} / best_first_move = {} / Current board score after best move = {:?}", best_minmax_score, best_first_move, Score::calc_score(&board));
         //assert_eq!(Score::calc_score(&board), best_minmax_score);
         board.board_state();
@@ -324,13 +323,13 @@ mod tests {
             (Move::new(Piece::from("DEXS"), Cell::from_index(&board, 15).unwrap())),
         ];
         for m in moves {
-            play(&mut board, &m);
+            board.play_and_remove_piece(&m).unwrap();
         }
 
-        warn!("{}", board);
+        debug!("{}", board);
         let mut minmax = MinMax::new(2, true);
         let ai_piece = minmax.choose_piece_for_opponent(&board);
-        warn!("Piece choose = {}", ai_piece);
+        debug!("Piece choose = {}", ai_piece);
     }
 
     #[test]

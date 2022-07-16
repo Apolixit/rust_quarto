@@ -60,7 +60,7 @@ impl Score {
     /// Return the score for the current cells
     fn calc_range_point(cells: &Vec<Cell>) -> usize {
         // We only get pieces which has been already played
-        let mut pieces: Vec<Piece> = cells
+        let pieces: Vec<Piece> = cells
             .into_iter()
             .filter(|c| c.piece().is_some())
             .map(|c| c.piece().unwrap())

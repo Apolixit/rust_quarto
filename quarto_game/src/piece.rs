@@ -22,13 +22,6 @@ pub trait PieceFeature {
         Self: Sized;
 }
 
-pub enum Carac {
-    Color,
-    Shape,
-    Hole,
-    Height,
-}
-
 /// The color type of a piece
 #[derive(Debug, Clone, Copy, Eq, PartialEq, IntoEnumIterator)]
 pub enum Color {
@@ -248,9 +241,9 @@ impl From<&str> for Shape {
 #[derive(Debug, Clone, Copy, Eq)]
 pub struct Piece {
     pub color: Color,
-    pub hole: Hole,     //○, □
-    pub height: Height, //⇑, ⇓
-    pub shape: Shape,   //○, □
+    pub hole: Hole,
+    pub height: Height,
+    pub shape: Shape,
 }
 
 impl Piece {
@@ -280,7 +273,8 @@ impl Piece {
             pieces.into_iter().all(|p| p.shape == Shape::Circle),
             pieces.into_iter().all(|p| p.shape == Shape::Square),
         ];
-        // print!("Vec<Piece> : {:?}", winning_condition);
+
+        trace!("Piece >> check_piece_is_winning : {:?}", winning_condition);
 
         winning_condition.iter().any(|w| *w)
     }
@@ -326,9 +320,7 @@ impl Display for Piece {
 impl From<&str> for Piece {
     fn from(s: &str) -> Self {
         //4 character max
-        if s.chars().count() != 4 {
-            panic!("Out of bound");
-        }
+        assert!(s.chars().count() == 4);
 
         let lower_s = s.to_uppercase();
         Piece::new(
@@ -464,7 +456,6 @@ mod tests {
         let mut board = Board::create();
 
         let first_piece = Piece::from_index(&board, 0).unwrap();
-        let second_piece = Piece::from_index(&board, 1).unwrap();
         let last_piece = Piece::from_index(&board, 15).unwrap();
         // We play the first piece
         board

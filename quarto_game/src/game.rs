@@ -1,123 +1,10 @@
-use std::fmt::Display;
-
 use crate::{
-    ai::{self, Strategy, adequat_strategy},
-    board::{Board, BoardIndex, Cell},
+    board::{Board, Cell},
     error::ErrorGame,
     piece::Piece,
+    player::{Human, Player},
     r#move::Move,
 };
-
-pub enum PlayerType {
-    HUMAN,
-    AI,
-}
-
-pub trait Player {
-    /// The current player name
-    fn name(&self) -> String;
-
-    /// Explicit enum to declare player as Human or AI
-    fn player_type(&self) -> PlayerType;
-
-    fn choose_move(&self, piece: Piece, board: &Board) -> Result<Move, ErrorGame>;
-
-    fn choose_piece_for_opponent(&self, board: &Board) -> Piece;
-
-    // /// Func to decide which move to play
-    // fn choose_move<F>(&self, piece: &Piece, board: &Board, f: F) -> Result<Move, ErrorGame>
-    // where
-    //     F: Fn() -> usize;
-
-    // /// Func to decide which piece to give to his opponent
-    // fn choose_piece_for_opponent<F>(&self, board: &Board, f: F) -> Piece
-    // where
-    //     F: Fn() -> usize;
-}
-
-/// Represent a player (humain or AI)
-pub struct Human {
-    name: String,
-}
-
-impl Human {
-    pub fn new(name: &str) -> Human {
-        Human {
-            name: name.to_string(),
-        }
-    }
-}
-
-impl Player for Human {
-    fn name(&self) -> String {
-        String::from(&self.name)
-    }
-
-    fn player_type(&self) -> PlayerType {
-        PlayerType::HUMAN
-    }
-
-    fn choose_move(&self, piece: Piece, board: &Board) -> Result<Move, ErrorGame> {
-        unimplemented!()
-    }
-
-    fn choose_piece_for_opponent(&self, board: &Board) -> Piece {
-        unimplemented!()
-    }
-}
-
-impl Display for dyn Player {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.name())
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct AI {
-    name: String,
-}
-
-impl AI {
-    pub fn new() -> AI {
-        AI {
-            name: AI::default_name(),
-        }
-    }
-
-    pub fn default_name() -> String {
-        String::from("AI")
-    }
-
-    // /// Func to decide which move to play
-    // pub fn choose_move(&self, piece: Piece, board: &Board) -> Result<Move, ErrorGame> {
-    //     info!("Calc move with depth = {}", 2);
-    //     ai::MinMax::calc_move(board, 2, true, Some(piece))
-    // }
-
-    // /// Func to decide which piece to give to his opponent
-    // pub fn choose_piece_for_opponent(&self, board: &Board) -> Piece {
-    //     info!("Searching piece with depth = {}", 1);
-    //     ai::MinMax::calc_worst_piece(board, 2).to_owned()
-    // }
-}
-
-impl Player for AI {
-    fn name(&self) -> String {
-        String::from(&self.name)
-    }
-
-    fn player_type(&self) -> PlayerType {
-        PlayerType::AI
-    }
-
-    fn choose_move(&self, piece: Piece, board: &Board) -> Result<Move, ErrorGame> {
-        adequat_strategy(&board).calc_move(board, Some(piece))
-    }
-
-    fn choose_piece_for_opponent(&self, board: &Board) -> Piece {
-        adequat_strategy(&board).choose_piece_for_opponent(board)
-    }
-}
 
 pub struct Game {
     /// The Quarto board
@@ -131,29 +18,11 @@ pub struct Game {
 }
 
 impl Game {
-    /// Add player to the game
-    fn add_player<P1: Player + 'static, P2: Player + 'static>(
-        p1: P1,
-        p2: P2,
-    ) -> [Box<dyn Player>; 2] {
-        [Box::new(p1), Box::new(p2)]
-    }
-}
-
-impl Game {
     /// Start a new game
-    pub fn pvp(p1_name: &str, p2_name: &str) -> Game {
+    pub fn start<P1: Player + 'static, P2: Player + 'static>(p1: P1, p2: P2) -> Game {
         Game {
             board: Board::create(),
-            players: Game::add_player(Human::new(p1_name), Human::new(p2_name)),
-            current_index_player: 0,
-        }
-    }
-
-    pub fn pve(p1_name: &str) -> Game {
-        Game {
-            board: Board::create(),
-            players: Game::add_player(Human::new(p1_name), AI::new()),
+            players: [Box::new(p1), Box::new(p2)],
             current_index_player: 0,
         }
     }
@@ -190,27 +59,34 @@ impl Game {
 
     /// Play a turn with cell selected
     pub fn play(&mut self, piece: Piece, cell: Cell) -> Result<Piece, ErrorGame> {
-        self.board.play(piece, cell)?;
-        //Remove piece from available piece pool
-        let piece_removed = self.board.remove(piece)?;
-        Ok(piece_removed)
+        Ok(self.board.play_and_remove_piece(&Move::new(piece, cell))?)
+    }
+}
+
+/// Create game from two people names
+impl From<(&str, &str)> for Game {
+    fn from(p: (&str, &str)) -> Self {
+        Game::start(Human::new(p.0), Human::new(p.1))
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use crate::{player::{Human, AI}, board::BoardIndex};
+
     use super::*;
 
+    /// Start a new game and check players name
     #[test]
     fn start_new_game() {
-        let new_game = Game::pvp("p1", "p2");
+        let new_game = Game::start(Human::new("p1"), Human::new("p2"));
         assert_eq!(new_game.get_player(0).name(), "p1".to_string());
         assert_eq!(new_game.get_player(1).name(), "p2".to_string());
 
         assert_eq!(new_game.current_player().name(), "p1".to_string());
         assert_eq!(new_game.opponent_player().name(), "p2".to_string());
 
-        let new_game = Game::pve("I'm human bro");
+        let new_game = Game::start(Human::new("I'm human bro"), AI::new());
         assert_eq!(new_game.get_player(0).name(), "I'm human bro".to_string());
         assert_eq!(new_game.get_player(1).name(), AI::default_name());
 
@@ -225,7 +101,7 @@ mod tests {
     fn start_new_game_and_play_one_turn_with_struct() -> Result<(), ErrorGame> {
         const INDEX_PIECE: usize = 0;
         const INDEX_CELL: usize = 0;
-        let mut game = Game::pvp("p1", "p2");
+        let mut game = Game::from(("p1", "p2"));
 
         let available_pieces = game.board.get_available_pieces();
         let nb_initial_piece = available_pieces.len();
@@ -251,7 +127,7 @@ mod tests {
 
     #[test]
     fn start_new_game_and_play_one_turn_with_index() -> Result<(), ErrorGame> {
-        let mut game = Game::pvp("p1", "p2");
+        let mut game = Game::from(("p1", "p2"));
 
         let available_pieces = game.board.get_available_pieces();
         let nb_initial_piece = available_pieces.len();
@@ -276,16 +152,25 @@ mod tests {
 
     #[test]
     fn start_new_game_and_play_multiple_turn() -> Result<(), ErrorGame> {
-        let mut game = Game::pvp("p1", "p2");
+        let mut game = Game::from(("p1", "p2"));
 
         // let get_piece = |i: usize| Piece::from_index(&game.board, i).unwrap();
         // let get_cell = |i: usize| Cell::from_index(&game.board, i).unwrap();
 
-        let piece_0 = game.play(Piece::from_index(&game.board, 0).unwrap(), Cell::from_index(&game.board, 0).unwrap())?;
+        let piece_0 = game.play(
+            Piece::from_index(&game.board, 0).unwrap(),
+            Cell::from_index(&game.board, 0).unwrap(),
+        )?;
 
-        let piece_1 = game.play(Piece::from_index(&game.board, 1).unwrap(), Cell::from_index(&game.board, 5).unwrap())?;
+        let piece_1 = game.play(
+            Piece::from_index(&game.board, 1).unwrap(),
+            Cell::from_index(&game.board, 5).unwrap(),
+        )?;
 
-        let piece_10 = game.play(Piece::from_index(&game.board, 10).unwrap(), Cell::from_index(&game.board, 12).unwrap())?;
+        let piece_10 = game.play(
+            Piece::from_index(&game.board, 10).unwrap(),
+            Cell::from_index(&game.board, 12).unwrap(),
+        )?;
 
         match game.board[0].piece() {
             Some(p) => {
@@ -315,18 +200,12 @@ mod tests {
     #[test]
     fn start_new_game_and_try_to_play_multiple_time_same_piece_should_fail() -> Result<(), ErrorGame>
     {
-        let mut game = Game::pvp("p1", "p2");
+        let mut game = Game::from(("p1", "p2"));
         let piece = Piece::from_index(&game.board, 0).unwrap();
 
-        game.play(
-            piece,
-            Cell::from_index(&game.board, 0).unwrap(),
-        )?;
+        game.play(piece, Cell::from_index(&game.board, 0).unwrap())?;
         assert_eq!(
-            game.play(
-                piece,
-                Cell::from_index(&game.board, 1).unwrap()
-            ),
+            game.play(piece, Cell::from_index(&game.board, 1).unwrap()),
             Err(ErrorGame::PieceDoesNotBelongPlayable)
         );
 
@@ -337,7 +216,7 @@ mod tests {
     #[test]
     fn start_new_game_and_try_to_play_multiple_piece_same_cell_should_fail() -> Result<(), ErrorGame>
     {
-        let mut game = Game::pvp("p1", "p2");
+        let mut game = Game::from(("p1", "p2"));
 
         let piece_error = Piece::from_index(&game.board, 0);
 
@@ -366,7 +245,7 @@ mod tests {
     /// Remove piece multiple time
     #[test]
     fn start_new_game_and_try_to_remove_multiple_piece_should_fail() -> Result<(), ErrorGame> {
-        let mut game = Game::pvp("p1", "p2");
+        let mut game = Game::from(("p1", "p2"));
 
         let piece_to_remove = Piece::from_index(&game.board, 0)?;
         game.get_board_mut().remove(piece_to_remove)?;

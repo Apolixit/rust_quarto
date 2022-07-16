@@ -15,16 +15,20 @@ pub struct Move {
 }
 
 impl Move {
+    /// Create a new move
     pub fn new(piece: Piece, cell: Cell) -> Move{
         Move {
             piece: piece,
             cell: cell
         }
     }
+
+    /// Create a move from piece and cell index
     pub fn from_index(index_piece: usize, index_cell: usize, board: &Board) -> Result<Move, ErrorGame> {
         Ok(Move::new(Piece::from_index(&board, index_piece).unwrap(), Cell::from_index(&board, index_cell).unwrap()))
     }
 
+    /// Convert move to tuple (easier for pattern matching)
     pub fn to_tuple(&self, board: &Board) -> (usize, usize) {
         (self.piece.to_index(&board).unwrap(), self.cell().to_index())
     }
@@ -56,7 +60,6 @@ mod tests {
     use crate::board::Cell;
     use crate::board::HEIGHT_BOARD;
     use crate::board::WIDTH_BOARD;
-    use crate::piece;
     use crate::{board::Board, piece::Piece};
 
 

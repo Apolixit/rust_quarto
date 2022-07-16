@@ -6,7 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-quarto_game = { path = "../quarto_game" }
+quarto_game = { path = ".." }
 ansi_term = "0.12.1"
 log = "0.4.0"
 pretty_env_logger = "0.4.0"

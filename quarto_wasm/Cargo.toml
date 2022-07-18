@@ -1,0 +1,20 @@
+[package]
+name = "quarto_wasm"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+quarto_game = { path = ".." }
+cfg-if = "1.0.0"
+log = "0.4.17"
+console_log = { version = "0.2", optional = true, features = ["color"] }
+wasm-bindgen = "0.2.81"
+console_error_panic_hook = { version = "0.1.7", optional = true }
+
+[features]
+default = ["console_error_panic_hook", "console_log"]

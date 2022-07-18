@@ -7,7 +7,14 @@ use std::{
     ops::{Index, IndexMut},
 };
 
-use prettytable::{Cell as pCell, Row as pRow, Table as pTable};
+//https://doc.rust-lang.org/reference/conditional-compilation.html
+// let my_directory = if cfg!(windows) {
+//     "windows-specific-directory"
+// } else {
+//     "unix-directory"
+// };
+// #[cfg(target_arch = "wasm32")]
+// use prettytable::{Cell as pCell, Row as pRow, Table as pTable};
 
 use crate::piece::{Color, Height, Hole, Piece, PieceFeature, Shape};
 use crate::r#move::Move;
@@ -317,28 +324,18 @@ impl Board {
             .map(|(index_cell, _)| Move::new(piece, Cell::from_index(&self, index_cell).unwrap()))
             .collect::<Vec<Move>>()
     }
-}
 
-/// Give access to cells directly from Board (board[0], board[10])
-impl Index<usize> for Board {
-    type Output = Cell;
-
-    fn index(&self, index: usize) -> &Self::Output {
-        assert!(index <= WIDTH_BOARD * HEIGHT_BOARD, "Index out of bounds");
-        self.cells.get(&index).unwrap()
+    // #[cfg(target_arch = "wasm32")]
+    #[cfg(console_display)]
+    fn display_board(&self) -> String {
+        String::from("")
     }
-}
 
-impl IndexMut<usize> for Board {
-    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
-        assert!(index <= WIDTH_BOARD * HEIGHT_BOARD, "Index out of bounds");
-        self.cells.get_mut(&index).unwrap()
-    }
-}
+    // #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(not(console_display))]
+    fn display_board(&self) -> String {
+        use prettytable::{Cell as pCell, Row as pRow, Table as pTable};
 
-/// Draw the board
-impl Display for Board {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let pieces_feature = Color::to_vec_boxed()
             .into_iter()
             .map(|p| p)
@@ -391,12 +388,10 @@ impl Display for Board {
         let mut table_board = pTable::new();
         current_row = pRow::empty();
         for (i, cell) in self.cells.iter() {
-            let mut draw_cell = pCell::new_align(
+            let draw_cell = pCell::new_align(
                 format!("{:0>2}\n{}", i + 1, cell.to_string().as_str()).as_str(),
                 prettytable::format::Alignment::CENTER,
             );
-            //If it's a winning cell, draw the background
-            draw_cell.style(prettytable::Attr::ForegroundColor(2));
 
             current_row.add_cell(draw_cell);
             if (i + 1) % WIDTH_BOARD == 0 {
@@ -405,6 +400,31 @@ impl Display for Board {
             }
         }
         legend = format!("{}\n{}\n{}", legend, table_available_piece, table_board);
+        legend
+    }
+}
+
+/// Give access to cells directly from Board (board[0], board[10])
+impl Index<usize> for Board {
+    type Output = Cell;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        assert!(index <= WIDTH_BOARD * HEIGHT_BOARD, "Index out of bounds");
+        self.cells.get(&index).unwrap()
+    }
+}
+
+impl IndexMut<usize> for Board {
+    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+        assert!(index <= WIDTH_BOARD * HEIGHT_BOARD, "Index out of bounds");
+        self.cells.get_mut(&index).unwrap()
+    }
+}
+
+/// Draw the board
+impl Display for Board {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let legend = self.display_board();
         return write!(f, "{}", legend);
     }
 }
@@ -869,5 +889,12 @@ mod tests {
 
         let maybe_cell_winning = board.board_state();
         assert_eq!(maybe_cell_winning, BoardState::Draw);
+    }
+
+    #[test]
+    fn test_display_board_not_empty() {
+        let board = Board::create();
+
+        assert!(format!("{}", board).as_str() != "");
     }
 }

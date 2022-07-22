@@ -117,7 +117,7 @@ mod tests {
 
     #[test]
     fn test_adequat_thinking_strategy() {
-        const MAX_SECOND: u64 = 6;
+        const MAX_SECOND: u64 = 8;
         // Check if the strategy doesn't take too long during the game
         // Let's fight AI vs AI and check if they don't think too much time
         let mut board = Board::create();
@@ -125,11 +125,14 @@ mod tests {
         let mut elapsed_choose_piece_for_opponent: Duration;
         let mut elapsed_calc_move: Duration;
         let mut i = 1;
+        let mut datas = vec![];
         while board.board_state() == BoardState::GameInProgress {
             let mut ai = adequat_strategy(&board);
             now = Instant::now();
             let selected_piece = ai.choose_piece_for_opponent(&board);
             elapsed_choose_piece_for_opponent = now.elapsed();
+            datas.push(format!("Turn num {}, choose_piece_for_opponent = {}ms", i, elapsed_choose_piece_for_opponent.as_millis()));
+
             if elapsed_choose_piece_for_opponent.as_secs() > MAX_SECOND {
                 warn!(
                     "choose_piece_for_opponent duration exceed {}s ({}s) !",
@@ -143,6 +146,8 @@ mod tests {
             now = Instant::now();
             let selected_move = ai.calc_move(&board, Some(selected_piece)).unwrap();
             elapsed_calc_move = now.elapsed();
+            datas.push(format!("Turn num {}, calc_move = {}ms", i, elapsed_calc_move.as_millis()));
+
             if elapsed_calc_move.as_secs() > MAX_SECOND {
                 warn!(
                     "calc_move duration exceed {}s ({}s) !",
@@ -161,20 +166,7 @@ mod tests {
             i += 1;
             thread::sleep(time::Duration::from_secs(2));
         }
-    }
 
-    #[test]
-    fn test_adequat_same_depth_should_draw() {
-        let mut board = Board::create();
-        let mut ai = MinMaxTree::new(2, true);
-
-        while board.board_state() == BoardState::GameInProgress {
-            let selected_piece = ai.choose_piece_for_opponent(&board);
-            let selected_move = ai.calc_move(&board, Some(selected_piece)).unwrap();
-
-            board.play_and_remove_piece(&selected_move).unwrap();
-        }
-
-        // assert_eq!(board.board_state(), BoardState::Draw);
+        info!("{:?}", datas);
     }
 }

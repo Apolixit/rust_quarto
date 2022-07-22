@@ -1,7 +1,3 @@
-use std::cmp::Ordering;
-use std::collections::HashMap;
-use std::fmt::Debug;
-use std::fmt::Display;
 use crate::ai::get_moves;
 use crate::ai::Board;
 use crate::ai::ErrorGame;
@@ -12,7 +8,10 @@ use crate::board::BoardIndex;
 use crate::r#move::Move;
 use std::cmp::max;
 use std::cmp::min;
-
+use std::cmp::Ordering;
+use std::collections::HashMap;
+use std::fmt::Debug;
+use std::fmt::Display;
 /// Structure which represent the MinMax algorigthm with score affected to each moves
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub struct MinMaxTree {
@@ -129,7 +128,14 @@ impl MinMaxTree {
                 }
             }
 
-            trace!("I have selected = {:?} with score = {}", self.selected_move, self.score);
+            trace!(
+                "I have selected = {:?} with score = {}",
+                self.selected_move,
+                self.score
+            );
+            if self.selected_move.is_none() {
+                error!("update_move_from_first_child : no best selected move have been found !");
+            }
         }
     }
 
@@ -243,8 +249,8 @@ impl MinMaxTree {
     /// I try this to have a better algo in end game
     pub fn calc_adequat_depth(nb_piece_left: usize) -> usize {
         match nb_piece_left {
-            0..=8 => 2,
-            9..=10 => 3,
+            0..=7 => 2,
+            8..=10 => 3,
             11..=15 => 4,
             _ => 0,
         }
@@ -279,32 +285,43 @@ impl Strategy for MinMaxTree {
     }
 
     fn choose_piece_for_opponent(&mut self, board: &Board) -> Piece {
-        self.reset();
+        let mut worst_score: (Option<usize>, Score) = (None, Score::Win);
+        let initial_depth = self.depth;
 
-        // self.maximise = false;
-        self.minmax(board);
+        while worst_score.1 == Score::Win && self.depth > 0 {
+            self.reset();
 
-        // Visit of the children to select the worst move
-        let mut best_move_per_piece: HashMap<usize, Score> = HashMap::new();
-        for minmax in &self.children {
-            best_move_per_piece
-                .entry(
-                    minmax
-                        .selected_move
-                        .unwrap()
-                        .piece()
-                        .to_index(board)
-                        .unwrap(),
-                )
-                .and_modify(|score| *score = max(*score, minmax.score))
-                .or_insert(minmax.score);
+            // self.maximise = false;
+            self.minmax(board);
+
+            // Visit of the children to select the worst move
+            let mut best_move_per_piece: HashMap<usize, Score> = HashMap::new();
+            for minmax in &self.children {
+                best_move_per_piece
+                    .entry(
+                        minmax
+                            .selected_move
+                            .unwrap()
+                            .piece()
+                            .to_index(board)
+                            .unwrap(),
+                    )
+                    .and_modify(|score| *score = max(*score, minmax.score))
+                    .or_insert(minmax.score);
+            }
+
+            trace!("best_move_per_piece = {:?}", best_move_per_piece);
+            worst_score = best_move_per_piece.into_iter().min_by_key(|k| k.1).map(|k| (Some(k.0), k.1)).unwrap();
+
+            if worst_score.1 == Score::Win {
+                info!("All best move per piece with depth = {} are winning. We decrease depth to find a not winning play", self.depth());
+                self.depth = self.depth - 1;
+            }
         }
-
-        debug!("best_move_per_piece = {:?}", best_move_per_piece);
-        let worst_score = best_move_per_piece.into_iter().min_by_key(|k| k.1).unwrap();
-        let piece = Piece::from_index(&board, worst_score.0).unwrap();
-        debug!("worst_score = {} which is piece = {}", worst_score.1, piece);
-
+        
+        self.depth = initial_depth;
+        let piece = Piece::from_index(&board, worst_score.0.unwrap()).unwrap();
+        info!("worst_score = {} which is piece = {}", worst_score.1, piece);
         piece
     }
 }
@@ -313,7 +330,7 @@ impl Strategy for MinMaxTree {
 mod tests {
     use crate::{
         ai::{minmax_tree::MinMaxTree, Score, Strategy},
-        board::{Board, BoardIndex, Cell, BoardState},
+        board::{Board, BoardIndex, BoardState, Cell},
         piece::Piece,
         r#move::Move,
     };
@@ -380,11 +397,13 @@ mod tests {
         let selected_move = minmax_tree.selected_move.unwrap();
         debug!(
             "minmax best move = {} give score {}",
-            selected_move,
-            minmax_tree.score
+            selected_move, minmax_tree.score
         );
 
-        assert_eq!(minmax_tree.calc_move(&board, Some(piece_to_play)).unwrap(), selected_move);
+        assert_eq!(
+            minmax_tree.calc_move(&board, Some(piece_to_play)).unwrap(),
+            selected_move
+        );
 
         debug!("MinMax tree result =  \n{}", minmax_tree.as_tree(true));
     }
@@ -435,7 +454,7 @@ mod tests {
             ))
             .unwrap();
 
-            debug!("{}", board);
+        debug!("{}", board);
 
         let mut algo = MinMaxTree::new(2, true);
         algo.minmax(&board);
@@ -459,28 +478,33 @@ mod tests {
     fn test_debug_2() {
         let mut board = Board::create();
         board.with_scenario(vec![
-            Move::new(Piece::from("WFXS"), Cell::from_index(&board, 5).unwrap()),
-            Move::new(Piece::from("WFTS"), Cell::from_index(&board, 6).unwrap()),
-            Move::new(Piece::from("DEXC"), Cell::from_index(&board, 9).unwrap()),
-            Move::new(Piece::from("WETS"), Cell::from_index(&board, 10).unwrap()),
-            Move::new(Piece::from("WETC"), Cell::from_index(&board, 11).unwrap()),
-            Move::new(Piece::from("DEXS"), Cell::from_index(&board, 12).unwrap()),
-            Move::new(Piece::from("DFXC"), Cell::from_index(&board, 13).unwrap()),
-            Move::new(Piece::from("DFTC"), Cell::from_index(&board, 14).unwrap()),
-            Move::new(Piece::from("WFXC"), Cell::from_index(&board, 15).unwrap()),
+            Move::new(Piece::from("DETS"), Cell::from_index(&board, 5).unwrap()),
+            Move::new(Piece::from("DFTS"), Cell::from_index(&board, 6).unwrap()),
+            Move::new(Piece::from("WFXC"), Cell::from_index(&board, 9).unwrap()),
+            Move::new(Piece::from("WETC"), Cell::from_index(&board, 10).unwrap()),
+            Move::new(Piece::from("DFTC"), Cell::from_index(&board, 12).unwrap()),
+            Move::new(Piece::from("WFTC"), Cell::from_index(&board, 13).unwrap()),
+            Move::new(Piece::from("WFXS"), Cell::from_index(&board, 14).unwrap()),
+            Move::new(Piece::from("DEXC"), Cell::from_index(&board, 15).unwrap()),
         ]);
 
         info!("{}", board);
 
-        let mut algo = MinMaxTree::new(1, true);
-        // algo.minmax(&board);
-        // info!("{}", algo.as_tree(false));
-        let piece_opponent = algo.choose_piece_for_opponent(&board);
-        info!("piece_opponent = {}", piece_opponent);
+        // Manu joue
+        // Romu donne à Manu : DEXS
 
-        let selected_move = algo.calc_move(&board, Some(piece_opponent)).unwrap();
-        info!("Play {} like this {}", selected_move.piece(), selected_move);
-        board.play(selected_move.piece(), selected_move.cell()).unwrap();
-        info!("Status {:?}", board.board_state())
+        let mut algo = MinMaxTree::new(3, true);
+        // let best_move = algo.calc_move(&board, Some(Piece::from("DETS")));
+        let best_move = algo.calc_move(&board, None);
+        info!("best_move = {}", best_move.unwrap());
+        // algo.minmax(&board);
+        // info!("{}", algo.as_tree(true));
+        // let piece_opponent = algo.choose_piece_for_opponent(&board);
+        // info!("piece_opponent = {}", piece_opponent);
+
+        // let selected_move = algo.calc_move(&board, Some(piece_opponent)).unwrap();
+        // info!("Play {} like this {}", selected_move.piece(), selected_move);
+        // board.play(selected_move.piece(), selected_move.cell()).unwrap();
+        // info!("Status {:?}", board.board_state())
     }
 }

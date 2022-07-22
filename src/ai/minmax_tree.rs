@@ -330,7 +330,7 @@ impl Strategy for MinMaxTree {
 mod tests {
     use crate::{
         ai::{minmax_tree::MinMaxTree, Score, Strategy},
-        board::{Board, BoardIndex, BoardState, Cell},
+        board::{Board, BoardIndex, Cell},
         piece::Piece,
         r#move::Move,
     };

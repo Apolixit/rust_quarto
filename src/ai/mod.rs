@@ -79,7 +79,6 @@ mod tests {
     use crate::ai::Board;
     use crate::ai::Piece;
     use crate::ai::RandomAI;
-    use crate::ai::Strategy;
     use crate::board::BoardState;
     use crate::board::Cell;
     use crate::r#move::Move;

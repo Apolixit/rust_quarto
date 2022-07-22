@@ -326,13 +326,13 @@ impl Board {
     }
 
     // #[cfg(target_arch = "wasm32")]
-    #[cfg(console_display)]
+    #[cfg(not(feature = "display_console"))]
     fn display_board(&self) -> String {
         String::from("")
     }
 
     // #[cfg(not(target_arch = "wasm32"))]
-    #[cfg(not(console_display))]
+    #[cfg(feature = "display_console")]
     fn display_board(&self) -> String {
         use prettytable::{Cell as pCell, Row as pRow, Table as pTable};
 
@@ -893,6 +893,11 @@ mod tests {
 
     #[test]
     fn test_display_board_not_empty() {
+        if cfg!(feature = "display_console") {
+            debug!("console_display ACTIVATED");
+        } else {
+            debug!("console_display DISABLED");
+        }
         let board = Board::create();
 
         assert!(format!("{}", board).as_str() != "");

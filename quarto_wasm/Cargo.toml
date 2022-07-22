@@ -9,7 +9,7 @@ edition = "2021"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-quarto_game = { path = ".." }
+quarto_game = { path = "..", default-features = false }
 cfg-if = "1.0.0"
 log = "0.4.17"
 console_log = { version = "0.2", optional = true, features = ["color"] }

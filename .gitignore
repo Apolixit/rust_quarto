@@ -1,2 +1,4 @@
 **/quarto_console/target
 **/target
+**/quarto_wasm/target
+**/quarto_wasm/dist

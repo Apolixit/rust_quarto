@@ -27,6 +27,14 @@ impl Game {
         }
     }
 
+    pub fn start_dyn(p1: Box<dyn Player>, p2: Box<dyn Player>) -> Game {
+        Game {
+            board: Board::create(),
+            players: [p1, p2],
+            current_index_player: 0,
+        }
+    }
+
     /// Borrow the board
     pub fn get_board(&self) -> &Board {
         &self.board

@@ -100,7 +100,7 @@ fn main() {
 /// Ask to choose a piece for opponent
 fn choose_piece_for_opponent(game: &mut Game) -> Result<Piece, ErrorGame> {
     match game.opponent_player().player_type() {
-        PlayerType::HUMAN => Piece::from_index(game.get_board(), read_input_index(
+        PlayerType::Human => Piece::from_index(game.get_board(), read_input_index(
             format!(
                 "{} choose a piece for {}\nEnter the piece number : ",
                 game.opponent_player(), game.current_player()
@@ -125,7 +125,7 @@ fn choose_piece_for_opponent(game: &mut Game) -> Result<Piece, ErrorGame> {
 /// Ask in which cell the piece has to be played
 fn play_piece_in_cell(game: &mut Game, piece_to_play: &Piece) -> Cell {
     match game.current_player().player_type() {
-        PlayerType::HUMAN => Cell::from_index(
+        PlayerType::Human => Cell::from_index(
             game.get_board(),
             read_input_index(
                 format!(

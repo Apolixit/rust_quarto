@@ -1,11 +1,11 @@
 mod pieces;
 mod board;
 mod buttons;
+mod game;
 
-use std::collections::BTreeMap;
-
+use game::{Game, GameProps};
 use log::info;
-use quarto_game::{board::{Board, BoardIndex}, player::{Human, AI}, piece::Piece};
+use quarto_game::{board::{Board, BoardIndex}, player::{Human, AI, PlayerType}, piece::Piece};
 use wasm_bindgen::prelude::*;
 use yew::prelude::*;
 
@@ -15,13 +15,10 @@ use crate::pieces::BoardPiece;
 pub enum AppMessage {
     NewPvpGame,
     NewPvAIGame,
-    PieceSelected(usize),
-    PiecePlayed,
-    GameIsFinish,
 }
 
 pub struct App {
-    game: Option<quarto_game::game::Game>,
+    pub game_props: Option<GameProps>
 }
 
 impl Component for App {
@@ -31,20 +28,31 @@ impl Component for App {
     fn create(ctx: &Context<Self>) -> Self {
         // let piece_selected_callback = ctx.link().send_message(msg)
 
-        Self { game: None }
+        Self { game_props: None }
     }
 
     fn update(&mut self, ctx: &Context<Self>, msg: Self::Message) -> bool {
         match msg {
             AppMessage::NewPvpGame => {
-                self.game = Some(quarto_game::game::Game::start(Human::new("Apo"), Human::new("Opponent")));
+                self.game_props = Some(GameProps {
+                    p1_name: "Apo".to_owned(),
+                    p1_type: PlayerType::Human,
+                    p2_name: "Opponent".to_owned(),
+                    p2_type: PlayerType::Human
+                });
+                // self.game = Some(quarto_game::game::Game::start(Human::new("Apo"), Human::new("Opponent")));
+                // self.state = Some(GameState::ChoosePiece);
             },
             AppMessage::NewPvAIGame => {
-                self.game = Some(quarto_game::game::Game::start(Human::new("Apo"), AI::new()));
+                self.game_props = Some(GameProps {
+                    p1_name: "Apo".to_owned(),
+                    p1_type: PlayerType::Human,
+                    p2_name: "AI".to_owned(),
+                    p2_type: PlayerType::AI
+                });
+                // self.game = Some(quarto_game::game::Game::start(Human::new("Apo"), AI::new()));
+                // self.state = Some(GameState::ChoosePiece);
             },
-            AppMessage::PieceSelected(index_piece) => {
-                info!("Gotcha ! {} / {}", index_piece, Piece::from_index(self.game.as_ref().unwrap().get_board(), index_piece).unwrap())
-            }
             _ => {}
         }
         info!("A new game is started !");
@@ -59,30 +67,15 @@ impl Component for App {
             </div>
         };
 
-        let cb = ctx.link().callback(|index_piece: usize| AppMessage::PieceSelected(index_piece));
-
-        let on_piece_selected = Callback::from(move |index_piece| {
-            info!("From App, piece selected = ({} /)", index_piece);
-            cb.emit(index_piece)
-        });
-
         html! {
            <div class="flex flex-row">
                 {
-                    if self.game.is_none() {
+                    if self.game_props.is_none() {
                         html! { start_game.clone() }
                     } else {
+                        let props = self.game_props.as_ref().unwrap();
                         html! {
-                            <>
-                                <div class="basis-1/4">
-                                    <BoardGame cells={self.game.as_ref().unwrap().get_board().get_cells().clone()} />
-                                </div>
-                                <div class="basis-1/4">
-                                    <BoardPiece
-                                        pieces={self.game.as_ref().unwrap().get_board().get_available_pieces().clone()}
-                                        {on_piece_selected} />
-                                </div>
-                            </>
+                            <Game ..props.clone() />
                         }
                     }
                 }

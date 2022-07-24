@@ -2,9 +2,10 @@ use std::fmt::Display;
 
 use crate::{piece::Piece, board::Board, r#move::Move, error::ErrorGame, ai::adequat_strategy};
 
+#[derive(PartialEq, Clone)]
 pub enum PlayerType {
     /// A human player
-    HUMAN,
+    Human,
     /// An AI player
     AI,
 }
@@ -42,7 +43,7 @@ impl Player for Human {
     }
 
     fn player_type(&self) -> PlayerType {
-        PlayerType::HUMAN
+        PlayerType::Human
     }
 
     fn choose_move(&self, _piece: Piece, _board: &Board) -> Result<Move, ErrorGame> {

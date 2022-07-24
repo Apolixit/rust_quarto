@@ -11,7 +11,10 @@ pub struct BoardGame;
 
 #[derive(Debug, Clone, PartialEq, Properties)]
 pub struct BoardGameProps {
-    pub cells: BTreeMap<usize, quarto_game::board::Cell>
+    pub cells: BTreeMap<usize, quarto_game::board::Cell>,
+    #[prop_or(true)]
+    pub active: bool,
+    pub on_cell_selected: Callback<usize>,
 }
 
 impl Component for BoardGame {
@@ -26,6 +29,9 @@ impl Component for BoardGame {
         match msg {
             BoardMessage::Click(index_cell) => {
                 info!("You clicked on cell {}", index_cell);
+                if ctx.props().active {
+                    ctx.props().on_cell_selected.emit(index_cell);
+                }
             }
         }
 
@@ -39,7 +45,7 @@ impl Component for BoardGame {
             .for_each(|i| cells.push(i));
 
         let display_board = html! {
-            for cells.into_iter().map(|cell_index| {
+            for ctx.props().clone().cells.into_iter().map(|(cell_index, current_cell)| {
                 let mut cell_class = vec![
                     "board-cell",
                     "w-1/4 h-1/4 rounded-full border-2"];
@@ -52,7 +58,20 @@ impl Component for BoardGame {
                      }
 
                 html! {
-                    <div class={classes!(cell_class)} onclick={ctx.link().callback(move |_| BoardMessage::Click(cell_index))}></div>
+                    <div class={classes!(cell_class)} onclick={ctx.link().callback(move |_| BoardMessage::Click(cell_index))}>
+                        {
+                            if current_cell.piece().is_some() {
+                                let current_piece = current_cell.piece().unwrap();
+                                let piece_file = format!("static/{}.png", current_piece.as_text());
+
+                                html! {
+                                    <img src={piece_file} alt="Awesome image" class="w-8" />
+                                }
+                            } else {
+                                html! {}
+                            }
+                        }
+                    </div>
                 }
             })
         };

@@ -278,6 +278,10 @@ impl Piece {
 
         winning_condition.iter().any(|w| *w)
     }
+
+    pub fn as_text(&self) -> String {
+        format!("{}{}{}{}", self.color.acronym(), self.hole.acronym(), self.height.acronym(), self.shape.acronym())
+    }
 }
 
 impl BoardIndex for Piece {

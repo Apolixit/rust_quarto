@@ -311,14 +311,18 @@ impl Strategy for MinMaxTree {
             }
 
             trace!("best_move_per_piece = {:?}", best_move_per_piece);
-            worst_score = best_move_per_piece.into_iter().min_by_key(|k| k.1).map(|k| (Some(k.0), k.1)).unwrap();
+            worst_score = best_move_per_piece
+                .into_iter()
+                .min_by_key(|k| k.1)
+                .map(|k| (Some(k.0), k.1))
+                .unwrap();
 
             if worst_score.1 == Score::Win {
                 info!("All best move per piece with depth = {} are winning. We decrease depth to find a not winning play", self.depth());
                 self.depth = self.depth - 1;
             }
         }
-        
+
         self.depth = initial_depth;
         let piece = Piece::from_index(&board, worst_score.0.unwrap()).unwrap();
         info!("worst_score = {} which is piece = {}", worst_score.1, piece);
@@ -490,9 +494,6 @@ mod tests {
 
         info!("{}", board);
 
-        // Manu joue
-        // Romu donne à Manu : DEXS
-
         let mut algo = MinMaxTree::new(3, true);
         // let best_move = algo.calc_move(&board, Some(Piece::from("DETS")));
         let best_move = algo.calc_move(&board, None);
@@ -506,5 +507,18 @@ mod tests {
         // info!("Play {} like this {}", selected_move.piece(), selected_move);
         // board.play(selected_move.piece(), selected_move.cell()).unwrap();
         // info!("Status {:?}", board.board_state())
+    }
+
+    #[test]
+    fn bench_minimax() {
+        let board = Board::create();
+        let mut algo = MinMaxTree::new(2, true);
+
+        let now = std::time::Instant::now();
+
+        algo.minmax(&board);
+
+        let elapsed = now.elapsed();
+        info!("MinMax duration: {} ns ({} ms)", elapsed.as_nanos(), elapsed.as_millis());
     }
 }

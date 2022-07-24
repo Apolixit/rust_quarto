@@ -14,6 +14,8 @@ pub mod ai;
 pub mod r#move;
 pub mod player;
 
+pub use game::Game;
+
 
 
 cfg_if! {

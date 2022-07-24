@@ -1,5 +1,4 @@
 use crate::{error::ErrorGame};
-use ansi_term::Style;
 use enum_iterator::IntoEnumIterator;
 use std::{
     collections::BTreeMap,
@@ -335,6 +334,7 @@ impl Board {
     #[cfg(feature = "display_console")]
     fn display_board(&self) -> String {
         use prettytable::{Cell as pCell, Row as pRow, Table as pTable};
+        use ansi_term::Style;
 
         let pieces_feature = Color::to_vec_boxed()
             .into_iter()
@@ -885,7 +885,7 @@ mod tests {
             board.remove(piece).unwrap();
         }
 
-        debug!("{}", board);
+        error!("{}", board);
 
         let maybe_cell_winning = board.board_state();
         assert_eq!(maybe_cell_winning, BoardState::Draw);

@@ -116,7 +116,7 @@ mod tests {
 
     #[test]
     fn test_adequat_thinking_strategy() {
-        const MAX_SECOND: u64 = 8;
+        const MAX_SECOND: u64 = 15;
         // Check if the strategy doesn't take too long during the game
         // Let's fight AI vs AI and check if they don't think too much time
         let mut board = Board::create();
@@ -133,7 +133,7 @@ mod tests {
             datas.push(format!("Turn num {}, choose_piece_for_opponent = {}ms", i, elapsed_choose_piece_for_opponent.as_millis()));
 
             if elapsed_choose_piece_for_opponent.as_secs() > MAX_SECOND {
-                warn!(
+                error!(
                     "choose_piece_for_opponent duration exceed {}s ({}s) !",
                     MAX_SECOND,
                     elapsed_choose_piece_for_opponent.as_secs()
@@ -148,7 +148,7 @@ mod tests {
             datas.push(format!("Turn num {}, calc_move = {}ms", i, elapsed_calc_move.as_millis()));
 
             if elapsed_calc_move.as_secs() > MAX_SECOND {
-                warn!(
+                error!(
                     "calc_move duration exceed {}s ({}s) !",
                     MAX_SECOND,
                     elapsed_calc_move.as_secs()

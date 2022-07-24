@@ -1,5 +1,6 @@
 use core::cmp::Ordering;
 use std::fmt::Display;
+use std::iter::Sum;
 use crate::board::Board;
 use crate::board::Cell;
 use crate::board::HEIGHT_BOARD;
@@ -10,8 +11,6 @@ use crate::piece::Hole;
 use crate::piece::Piece;
 use crate::piece::Shape;
 
-pub const WIN_SCORE: usize = 1000;
-
 #[derive(Debug, Eq, PartialEq, Clone, Copy)]
 pub enum Score {
     Point(usize),
@@ -21,10 +20,10 @@ pub enum Score {
 impl Score {
     /// Return the global board score or if the board is winning
     pub fn calc_score(board: &Board) -> Score {
-        let mut h_score: Vec<usize> = vec![];
-        let mut v_score: Vec<usize> = vec![];
-        let mut d_score_1: Vec<usize> = vec![];
-        let mut d_score_2: Vec<usize> = vec![];
+        let mut h_score: Vec<Score> = vec![];
+        let mut v_score: Vec<Score> = vec![];
+        let mut d_score_1: Vec<Score> = vec![];
+        let mut d_score_2: Vec<Score> = vec![];
 
         for i in 0..WIDTH_BOARD {
             let mut horizontal_cells: Vec<Cell> = vec![];
@@ -33,10 +32,10 @@ impl Score {
                 horizontal_cells.push(Cell::from_coordinate(&board, j, i).unwrap());
                 vertical_cells.push(Cell::from_coordinate(&board, i, j).unwrap());
             }
-            // println!("{:?}", horizontal_cells);
+
             h_score.push(Score::calc_range_point(&horizontal_cells));
             v_score.push(Score::calc_range_point(&vertical_cells));
-            // println!("Score == {}", h_score);
+
             if Score::has_win(&h_score) || Score::has_win(&v_score) {
                 return Score::Win;
             }
@@ -49,16 +48,16 @@ impl Score {
             return Score::Win;
         }
 
-        Score::Point(Score::sum_scores(vec![h_score, v_score, d_score_1, d_score_2]))
+        Score::sum_scores(vec![h_score, v_score, d_score_1, d_score_2])
     }
 
     /// Add all horizontal / vertical and diagonal score to get a global board score
-    fn sum_scores(scores: Vec<Vec<usize>>) -> usize {
-        scores.iter().flatten().sum::<usize>()
+    fn sum_scores(scores: Vec<Vec<Score>>) -> Score {
+        scores.into_iter().flatten().sum::<Score>()
     }
 
     /// Return the score for the current cells
-    fn calc_range_point(cells: &Vec<Cell>) -> usize {
+    fn calc_range_point(cells: &Vec<Cell>) -> Score {
         // We only get pieces which has been already played
         let pieces: Vec<Piece> = cells
             .into_iter()
@@ -68,13 +67,8 @@ impl Score {
 
         // No piece has been played -> score = 0
         if pieces.is_empty() {
-            return 0 as usize;
+            return Score::Point(0);
         }
-
-        //All the piece has been played and the line is not winning -> score = 0 because it's a bad move
-        // if pieces.len() == 4 && !Piece::check_piece_is_winning(&mut pieces) {
-        //     return 0 as usize;
-        // }
 
         let b_pieces = &pieces;
 
@@ -116,34 +110,34 @@ impl Score {
                 .filter(|f| f.shape == Shape::Square)
                 .count(),
         ];
-        // trace!("Points = {:?}", points);
+
         Score::calc_point(points)
     }
 
     /// Calc the score for the current pieces alignement
-    fn calc_point(points: Vec<usize>) -> usize {
+    fn calc_point(points: Vec<usize>) -> Score {
         points
             .into_iter()
             .map(|p| {
                 /*
                  * 0 or 1 piece = 0 point
-                 * 2 pieces = 3 points
-                 * 3 pieces = 6 points
-                 * 4 pieces = 1000 points
+                 * 2 pieces = 1 points
+                 * 3 pieces = 2 points
+                 * 4 pieces = Win
                  */
                 match p {
-                    2 => 1 as usize,
-                    3 => 2 as usize,
-                    4 => 1000 as usize,
-                    _ => 0 as usize,
+                    2 => Score::Point(1),
+                    3 => Score::Point(2),
+                    4 => Score::Win,
+                    _ => Score::Point(0),
                 }
             })
-            .sum::<usize>()
+            .sum::<Score>()
     }
 
 
-    fn has_win(score: &Vec<usize>) -> bool {
-        if score.last().unwrap() >= &WIN_SCORE {
+    fn has_win(score: &Vec<Score>) -> bool {
+        if score.last().unwrap() == &Score::Win {
             return true;
         }
         false
@@ -202,6 +196,21 @@ impl Ord for Score {
                 }
             }
         }
+    }
+}
+
+impl Sum for Score {
+    fn sum<I: Iterator<Item = Self>>(iter: I) -> Self {
+        iter.fold(Self::Point(0), |x, y| {
+            if x == Score::Win || y == Score::Win {
+                return Score::Win;
+            }
+            if let (Score::Point(x_val), Score::Point(y_val)) = (x, y) {
+                return Score::Point(x_val + y_val);
+            }
+
+            Score::Point(0)
+        })
     }
 }
 
@@ -335,5 +344,26 @@ mod tests {
 
         assert!(Score::Point(50) < Score::Win);
         assert!(Score::Win == Score::Win);
+    }
+
+    #[test]
+    fn bench_score() {
+        let mut board = Board::create();
+        board.with_scenario(vec![
+            crate::r#move::Move::new(Piece::from("DETS"), Cell::from_index(&board, 5).unwrap()),
+            crate::r#move::Move::new(Piece::from("DFTS"), Cell::from_index(&board, 6).unwrap()),
+            crate::r#move::Move::new(Piece::from("WFXC"), Cell::from_index(&board, 9).unwrap()),
+            crate::r#move::Move::new(Piece::from("WETC"), Cell::from_index(&board, 10).unwrap()),
+            crate::r#move::Move::new(Piece::from("DFTC"), Cell::from_index(&board, 12).unwrap()),
+            crate::r#move::Move::new(Piece::from("WFTC"), Cell::from_index(&board, 13).unwrap()),
+            crate::r#move::Move::new(Piece::from("WFXS"), Cell::from_index(&board, 14).unwrap()),
+            crate::r#move::Move::new(Piece::from("DEXC"), Cell::from_index(&board, 15).unwrap()),
+        ]);
+
+        let now = std::time::Instant::now();
+
+        Score::calc_score(&board);
+
+        info!("Score: {} nanosec", now.elapsed().as_nanos());
     }
 }
